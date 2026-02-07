@@ -14,38 +14,36 @@ import {
     DialogClose,
 } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
-import type { CreateLessonPlanDto } from "@/lib/api/curriculum";
+import type { CreateLessonRecordDto } from "@/lib/api/curriculum";
 
-interface LessonPlanFormProps {
+interface LessonRecordFormProps {
     classId: string;
-    onSubmit: (data: CreateLessonPlanDto) => void;
+    onSubmit: (data: CreateLessonRecordDto) => void;
     isLoading?: boolean;
 }
 
-export function LessonPlanForm({ classId, onSubmit, isLoading }: LessonPlanFormProps) {
+export function LessonRecordForm({ classId, onSubmit, isLoading }: LessonRecordFormProps) {
     const [open, setOpen] = useState(false);
-    const [title, setTitle] = useState("");
-    const [description, setDescription] = useState("");
-    const [subject, setSubject] = useState("");
-    const [scheduledDate, setScheduledDate] = useState("");
-    const [week, setWeek] = useState(1);
+    const [date, setDate] = useState("");
+    const [time, setTime] = useState("");
+    const [content, setContent] = useState("");
+    const [assignmentResult, setAssignmentResult] = useState("");
+    const [nextAssignment, setNextAssignment] = useState("");
+    const [testResult, setTestResult] = useState("");
 
     const handleSubmit = () => {
-        if (!title || !subject || !scheduledDate) return;
+        if (!date || !time || !content) return;
         onSubmit({
             classId,
-            title,
-            description: description || undefined,
-            subject,
-            scheduledDate,
-            week,
+            date,
+            time,
+            content,
+            assignmentResult: assignmentResult || undefined,
+            nextAssignment: nextAssignment || undefined,
+            testResult: testResult || undefined,
         });
-        // Reset
-        setTitle("");
-        setDescription("");
-        setSubject("");
-        setScheduledDate("");
-        setWeek(1);
+        setDate(""); setTime(""); setContent("");
+        setAssignmentResult(""); setNextAssignment(""); setTestResult("");
         setOpen(false);
     };
 
@@ -54,72 +52,58 @@ export function LessonPlanForm({ classId, onSubmit, isLoading }: LessonPlanFormP
             <DialogTrigger asChild>
                 <Button size="sm">
                     <Plus className="w-4 h-4 mr-2" />
-                    수업 계획 추가
+                    수업 기록 추가
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>새 수업 계획 추가</DialogTitle>
+                    <DialogTitle>새 수업 기록 작성</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="lesson-title">수업 제목 *</Label>
-                        <Input
-                            id="lesson-title"
-                            placeholder="예: 이차방정식"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="lesson-subject">과목 *</Label>
-                        <Input
-                            id="lesson-subject"
-                            placeholder="예: 수학"
-                            value={subject}
-                            onChange={(e) => setSubject(e.target.value)}
-                        />
-                    </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label htmlFor="lesson-date">수업 날짜 *</Label>
-                            <Input
-                                id="lesson-date"
-                                type="date"
-                                value={scheduledDate}
-                                onChange={(e) => setScheduledDate(e.target.value)}
-                            />
+                            <Label htmlFor="rec-date">날짜 *</Label>
+                            <Input id="rec-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="lesson-week">주차</Label>
-                            <Input
-                                id="lesson-week"
-                                type="number"
-                                min={1}
-                                value={week}
-                                onChange={(e) => setWeek(parseInt(e.target.value) || 1)}
-                            />
+                            <Label htmlFor="rec-time">시간 *</Label>
+                            <Input id="rec-time" placeholder="예: 14:00~16:00" value={time} onChange={(e) => setTime(e.target.value)} />
                         </div>
                     </div>
+
                     <div className="space-y-2">
-                        <Label htmlFor="lesson-desc">설명</Label>
-                        <Input
-                            id="lesson-desc"
-                            placeholder="수업 내용에 대한 설명"
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
+                        <Label htmlFor="rec-content">수업내용 *</Label>
+                        <textarea
+                            id="rec-content"
+                            rows={4}
+                            className="w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                            placeholder="오늘 수업에서 다룬 내용을 입력하세요"
+                            value={content}
+                            onChange={(e) => setContent(e.target.value)}
                         />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="rec-ar">과제 결과</Label>
+                        <Input id="rec-ar" placeholder="지난 과제에 대한 결과" value={assignmentResult} onChange={(e) => setAssignmentResult(e.target.value)} />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="rec-na">다음 과제</Label>
+                        <Input id="rec-na" placeholder="다음 시간까지 해올 과제" value={nextAssignment} onChange={(e) => setNextAssignment(e.target.value)} />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="rec-tr">테스트 결과</Label>
+                        <Input id="rec-tr" placeholder="시험/쪽지시험 결과" value={testResult} onChange={(e) => setTestResult(e.target.value)} />
                     </div>
                 </div>
                 <DialogFooter>
                     <DialogClose asChild>
                         <Button variant="outline">취소</Button>
                     </DialogClose>
-                    <Button
-                        onClick={handleSubmit}
-                        disabled={!title || !subject || !scheduledDate || isLoading}
-                    >
-                        {isLoading ? "추가 중..." : "추가"}
+                    <Button onClick={handleSubmit} disabled={!date || !time || !content || isLoading}>
+                        {isLoading ? "저장 중..." : "저장"}
                     </Button>
                 </DialogFooter>
             </DialogContent>

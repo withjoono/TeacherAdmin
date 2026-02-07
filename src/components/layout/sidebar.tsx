@@ -55,6 +55,11 @@ const navItems: NavItem[] = [
     icon: BookOpen,
   },
   {
+    title: "출석부",
+    href: "/attendance",
+    icon: CheckSquare,
+  },
+  {
     title: "테스트",
     icon: FileText,
     subItems: [

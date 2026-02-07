@@ -4,251 +4,178 @@ import { useState, useEffect, useCallback } from "react";
 import { Header } from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 import {
   BookOpen,
-  ClipboardList,
   Calendar,
-  Plus,
-  CheckCircle2,
-  XCircle,
   Clock,
-  Trash2,
-  Eye,
-  Share2,
-  TrendingUp,
-  Users,
-  BarChart3,
-  Copy,
-  Link as LinkIcon,
   Pencil,
+  Trash2,
+  ChevronDown,
+  ChevronRight,
+  Users,
+  FileText,
+  ListChecks,
+  ClipboardList,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 
-import type {
-  LessonPlan,
-  Assignment,
-  CreateLessonPlanDto,
-  UpdateLessonPlanDto,
-  CreateAssignmentDto,
-} from "@/lib/api/curriculum";
+import type { LessonRecord, UpdateLessonRecordDto } from "@/lib/api/curriculum";
 import {
-  getLessonPlans,
-  createLessonPlan,
-  updateLessonPlan,
-  deleteLessonPlan,
-  getAssignments,
-  createAssignment,
-  deleteAssignment,
+  getLessonRecords,
+  createLessonRecord,
+  updateLessonRecord,
+  deleteLessonRecord,
 } from "@/lib/api/curriculum";
 
-import { LessonPlanForm } from "./_components/lesson-plan-form";
-import { AssignmentForm } from "./_components/assignment-form";
-import { ProgressEditDialog } from "./_components/progress-edit-dialog";
-import { SubmissionDetail } from "./_components/submission-detail";
+import { LessonRecordForm } from "./_components/lesson-plan-form";
+import { AttendanceTable } from "./_components/attendance-table";
+import { CommentSection } from "./_components/comment-section";
 
 // ================================
-// Mock 클래스 데이터 (mentoring API 연동 시 교체)
+// Mock 클래스 데이터
 // ================================
 const mockClasses = [
-  { id: "class-a", name: "A반", studentCount: 12, subject: "수학" },
-  { id: "class-b", name: "B반", studentCount: 15, subject: "영어" },
-  { id: "class-c", name: "C반", studentCount: 11, subject: "국어" },
+  { id: "class-a", name: "A반", studentCount: 5, subject: "수학" },
+  { id: "class-b", name: "B반", studentCount: 3, subject: "영어" },
+  { id: "class-c", name: "C반", studentCount: 2, subject: "국어" },
 ];
-
-// ================================
-// 유틸리티
-// ================================
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case "완료":
-      return "bg-green-100 text-green-700 border-green-200";
-    case "진행중":
-      return "bg-blue-100 text-blue-700 border-blue-200";
-    case "예정":
-      return "bg-gray-100 text-gray-600 border-gray-200";
-    default:
-      return "bg-gray-100 text-gray-600 border-gray-200";
-  }
-};
-
-const getStatusIcon = (status: string) => {
-  switch (status) {
-    case "완료":
-      return <CheckCircle2 className="w-4 h-4 text-green-600" />;
-    case "진행중":
-      return <Clock className="w-4 h-4 text-blue-600" />;
-    case "예정":
-      return <Calendar className="w-4 h-4 text-gray-500" />;
-    default:
-      return null;
-  }
-};
 
 // ================================
 // 메인 페이지
 // ================================
 export default function CurriculumManagementPage() {
   const [selectedClass, setSelectedClass] = useState(mockClasses[0].id);
-  const [lessons, setLessons] = useState<LessonPlan[]>([]);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [loadingLessons, setLoadingLessons] = useState(false);
-  const [loadingAssignments, setLoadingAssignments] = useState(false);
+  const [records, setRecords] = useState<LessonRecord[]>([]);
+  const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // Progress edit dialog
-  const [editingLesson, setEditingLesson] = useState<LessonPlan | null>(null);
-  const [progressDialogOpen, setProgressDialogOpen] = useState(false);
+  // 펼침/접힘 관리
+  const [expandedRecords, setExpandedRecords] = useState<Set<number>>(new Set());
 
-  // Submission detail dialog
-  const [viewingAssignment, setViewingAssignment] = useState<{
-    id: number;
-    title: string;
-  } | null>(null);
-  const [submissionDialogOpen, setSubmissionDialogOpen] = useState(false);
+  // 수정 다이얼로그
+  const [editingRecord, setEditingRecord] = useState<LessonRecord | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    date: "", time: "", content: "",
+    assignmentResult: "", nextAssignment: "", testResult: "",
+  });
 
-  // Share
-  const [shareLink, setShareLink] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const selectedClassInfo = mockClasses.find((c) => c.id === selectedClass);
 
-  const selectedClassName =
-    mockClasses.find((c) => c.id === selectedClass)?.name ?? "";
-
-  // 수업 진도 로드
-  const loadLessons = useCallback(async () => {
-    setLoadingLessons(true);
+  // 데이터 로드
+  const loadRecords = useCallback(async () => {
+    setLoading(true);
     try {
-      const data = await getLessonPlans(selectedClass);
-      setLessons(data);
+      const data = await getLessonRecords(selectedClass);
+      setRecords(data);
+      // 최신 기록 자동 펼침
+      if (data.length > 0) {
+        setExpandedRecords(new Set([data[0].id]));
+      }
     } finally {
-      setLoadingLessons(false);
-    }
-  }, [selectedClass]);
-
-  // 과제 로드
-  const loadAssignments = useCallback(async () => {
-    setLoadingAssignments(true);
-    try {
-      const data = await getAssignments(selectedClass);
-      setAssignments(data);
-    } finally {
-      setLoadingAssignments(false);
+      setLoading(false);
     }
   }, [selectedClass]);
 
   useEffect(() => {
-    loadLessons();
-    loadAssignments();
-  }, [loadLessons, loadAssignments]);
+    loadRecords();
+  }, [loadRecords]);
 
-  // 수업 계획 추가
-  const handleCreateLesson = async (data: CreateLessonPlanDto) => {
+  // 펼침 토글
+  const toggleExpand = (id: number) => {
+    setExpandedRecords(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // 수업 기록 추가
+  const handleCreate = async (data: Parameters<typeof createLessonRecord>[0]) => {
     setActionLoading(true);
     try {
-      await createLessonPlan(data);
-      await loadLessons();
+      await createLessonRecord(data);
+      await loadRecords();
     } finally {
       setActionLoading(false);
     }
   };
 
-  // 수업 진도 업데이트
-  const handleUpdateLesson = async (id: number, data: UpdateLessonPlanDto) => {
+  // 수정 다이얼로그 열기
+  const openEditDialog = (record: LessonRecord) => {
+    setEditingRecord(record);
+    setEditForm({
+      date: record.date,
+      time: record.time,
+      content: record.content,
+      assignmentResult: record.assignmentResult || "",
+      nextAssignment: record.nextAssignment || "",
+      testResult: record.testResult || "",
+    });
+    setEditDialogOpen(true);
+  };
+
+  // 수정 저장
+  const handleUpdate = async () => {
+    if (!editingRecord) return;
     setActionLoading(true);
     try {
-      await updateLessonPlan(id, selectedClass, data);
-      await loadLessons();
-      setProgressDialogOpen(false);
+      await updateLessonRecord(editingRecord.id, selectedClass, {
+        date: editForm.date,
+        time: editForm.time,
+        content: editForm.content,
+        assignmentResult: editForm.assignmentResult || undefined,
+        nextAssignment: editForm.nextAssignment || undefined,
+        testResult: editForm.testResult || undefined,
+      });
+      await loadRecords();
+      setEditDialogOpen(false);
     } finally {
       setActionLoading(false);
     }
   };
 
-  // 수업 삭제
-  const handleDeleteLesson = async (id: number) => {
-    if (!confirm("이 수업 계획을 삭제하시겠습니까?")) return;
+  // 삭제
+  const handleDelete = async (id: number) => {
+    if (!confirm("이 수업 기록을 삭제하시겠습니까?")) return;
     setActionLoading(true);
     try {
-      await deleteLessonPlan(id, selectedClass);
-      await loadLessons();
+      await deleteLessonRecord(id, selectedClass);
+      await loadRecords();
     } finally {
       setActionLoading(false);
     }
   };
-
-  // 과제 추가
-  const handleCreateAssignment = async (data: CreateAssignmentDto) => {
-    setActionLoading(true);
-    try {
-      await createAssignment(data);
-      await loadAssignments();
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  // 과제 삭제
-  const handleDeleteAssignment = async (id: number) => {
-    if (!confirm("이 과제를 삭제하시겠습니까?")) return;
-    setActionLoading(true);
-    try {
-      await deleteAssignment(id, selectedClass);
-      await loadAssignments();
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  // 공유 링크 생성 (Mock)
-  const handleCreateShareLink = () => {
-    const token = Math.random().toString(36).substring(2, 10);
-    const link = `${window.location.origin}/shared/${token}`;
-    setShareLink(link);
-    setCopied(false);
-  };
-
-  const handleCopyLink = () => {
-    if (shareLink) {
-      navigator.clipboard.writeText(shareLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  // 요약 통계
-  const completedLessons = lessons.filter((l) => l.status === "완료").length;
-  const inProgressLessons = lessons.filter(
-    (l) => l.status === "진행중"
-  ).length;
-  const avgProgress =
-    lessons.length > 0
-      ? Math.round(
-        lessons.reduce((sum, l) => sum + l.progress, 0) / lessons.length
-      )
-      : 0;
-  const totalAssignments = assignments.length;
-  const completedAssignments = assignments.filter(
-    (a) => a.status === "완료"
-  ).length;
 
   return (
     <div className="flex flex-col">
       <Header title="수업 현황 관리" />
 
-      <div className="flex-1 p-6 space-y-6">
-        {/* 반 선택 */}
+      <div className="flex-1 p-6 space-y-5">
+        {/* ========== 반 선택 ========== */}
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">클래스 선택</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-2 flex-wrap">
+          <CardContent className="p-4">
+            <div className="flex gap-2 flex-wrap items-center">
+              <span className="text-sm font-medium text-muted-foreground mr-2">반 선택</span>
               {mockClasses.map((cls) => (
                 <button
                   key={cls.id}
                   onClick={() => setSelectedClass(cls.id)}
                   className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${cls.id === selectedClass
-                      ? "bg-primary text-primary-foreground shadow-md"
-                      : "bg-muted hover:bg-muted/80"
+                    ? "bg-primary text-primary-foreground shadow-md"
+                    : "bg-muted hover:bg-muted/80"
                     }`}
                 >
                   {cls.name}
@@ -261,493 +188,222 @@ export default function CurriculumManagementPage() {
           </CardContent>
         </Card>
 
-        {/* 요약 통계 */}
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-500/10">
-                  <BookOpen className="w-5 h-5 text-blue-500" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">전체 수업</p>
-                  <p className="text-xl font-bold">{lessons.length}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-green-500/10">
-                  <CheckCircle2 className="w-5 h-5 text-green-500" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">완료</p>
-                  <p className="text-xl font-bold">{completedLessons}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-orange-500/10">
-                  <TrendingUp className="w-5 h-5 text-orange-500" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">평균 진도</p>
-                  <p className="text-xl font-bold">{avgProgress}%</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-purple-500/10">
-                  <ClipboardList className="w-5 h-5 text-purple-500" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">과제</p>
-                  <p className="text-xl font-bold">{totalAssignments}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-emerald-500/10">
-                  <BarChart3 className="w-5 h-5 text-emerald-500" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">과제 완료</p>
-                  <p className="text-xl font-bold">
-                    {completedAssignments}/{totalAssignments}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* ========== 수업 기록 헤더 ========== */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <BookOpen className="w-5 h-5" />
+              {selectedClassInfo?.name} 수업계획 / 현황
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              수업 내용을 기록하고 학생들의 출석과 과제를 관리하세요
+            </p>
+          </div>
+          <LessonRecordForm
+            classId={selectedClass}
+            onSubmit={handleCreate}
+            isLoading={actionLoading}
+          />
         </div>
 
-        {/* 관리 탭 */}
-        <Tabs defaultValue="lessons" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="lessons">
-              <BookOpen className="w-4 h-4 mr-2" />
-              수업 진도
-            </TabsTrigger>
-            <TabsTrigger value="assignments">
-              <ClipboardList className="w-4 h-4 mr-2" />
-              과제 관리
-            </TabsTrigger>
-            <TabsTrigger value="share">
-              <Share2 className="w-4 h-4 mr-2" />
-              공유
-            </TabsTrigger>
-          </TabsList>
+        {/* ========== 수업 기록 목록 ========== */}
+        {loading ? (
+          <Card>
+            <CardContent className="py-12 text-center text-muted-foreground">
+              로딩 중...
+            </CardContent>
+          </Card>
+        ) : records.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+              <BookOpen className="w-14 h-14 mb-4 opacity-30" />
+              <p className="text-lg font-medium">아직 수업 기록이 없습니다</p>
+              <p className="text-sm mt-1">&quot;수업 기록 추가&quot; 버튼으로 첫 수업을 기록하세요</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {records.map((record) => {
+              const isExpanded = expandedRecords.has(record.id);
 
-          {/* ==================== 수업 진도 탭 ==================== */}
-          <TabsContent value="lessons" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>
-                    {selectedClassName} - 주차별 수업 진도
-                  </CardTitle>
-                  <LessonPlanForm
-                    classId={selectedClass}
-                    onSubmit={handleCreateLesson}
-                    isLoading={actionLoading}
-                  />
-                </div>
-              </CardHeader>
-              <CardContent>
-                {loadingLessons ? (
-                  <p className="text-center py-8 text-muted-foreground">
-                    로딩 중...
-                  </p>
-                ) : lessons.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                    <BookOpen className="w-12 h-12 mb-3 opacity-40" />
-                    <p className="text-lg font-medium">
-                      등록된 수업 계획이 없습니다
-                    </p>
-                    <p className="text-sm">
-                      &quot;수업 계획 추가&quot; 버튼을 눌러 첫 수업을
-                      등록하세요
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {lessons.map((lesson) => (
-                      <div
-                        key={lesson.id}
-                        className="p-4 rounded-lg border hover:bg-accent/30 transition-colors"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-start gap-4 flex-1">
-                            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary shrink-0">
-                              {lesson.week}주
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <p className="font-semibold">
-                                  {lesson.title}
-                                </p>
-                                <span
-                                  className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${getStatusColor(
-                                    lesson.status
-                                  )}`}
-                                >
-                                  {lesson.status}
-                                </span>
-                              </div>
-                              <p className="text-sm text-muted-foreground mt-0.5">
-                                {lesson.subject} · {lesson.scheduledDate}
-                              </p>
-                              {lesson.description && (
-                                <p className="text-sm text-muted-foreground mt-1">
-                                  {lesson.description}
-                                </p>
-                              )}
-
-                              {/* 진도 바 */}
-                              {lesson.status !== "예정" && (
-                                <div className="mt-3">
-                                  <div className="flex items-center gap-2">
-                                    <div className="flex-1 h-2.5 bg-gray-200 rounded-full overflow-hidden">
-                                      <div
-                                        className={`h-full rounded-full transition-all ${lesson.progress >= 100
-                                            ? "bg-green-500"
-                                            : "bg-blue-500"
-                                          }`}
-                                        style={{
-                                          width: `${lesson.progress}%`,
-                                        }}
-                                      />
-                                    </div>
-                                    <span className="text-sm font-semibold text-muted-foreground w-12 text-right">
-                                      {lesson.progress}%
-                                    </span>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-1.5 shrink-0 ml-4">
-                            {getStatusIcon(lesson.status)}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setEditingLesson(lesson);
-                                setProgressDialogOpen(true);
-                              }}
-                            >
-                              <Pencil className="w-3.5 h-3.5 mr-1" />
-                              수정
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDeleteLesson(lesson.id)}
-                              className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
-                          </div>
+              return (
+                <Card key={record.id} className="overflow-hidden">
+                  {/* 접힌 상태: 요약 헤더 */}
+                  <div
+                    className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-accent/30 transition-colors"
+                    onClick={() => toggleExpand(record.id)}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        {isExpanded ? (
+                          <ChevronDown className="w-5 h-5" />
+                        ) : (
+                          <ChevronRight className="w-5 h-5" />
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5 text-sm">
+                          <Calendar className="w-4 h-4 text-blue-500" />
+                          <span className="font-semibold">{record.date}</span>
+                          <span className="text-muted-foreground">({record.dayOfWeek})</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                          <Clock className="w-4 h-4" />
+                          <span>{record.time}</span>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* ==================== 과제 관리 탭 ==================== */}
-          <TabsContent value="assignments" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>
-                    {selectedClassName} - 과제 목록
-                  </CardTitle>
-                  <AssignmentForm
-                    classId={selectedClass}
-                    onSubmit={handleCreateAssignment}
-                    isLoading={actionLoading}
-                  />
-                </div>
-              </CardHeader>
-              <CardContent>
-                {loadingAssignments ? (
-                  <p className="text-center py-8 text-muted-foreground">
-                    로딩 중...
-                  </p>
-                ) : assignments.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                    <ClipboardList className="w-12 h-12 mb-3 opacity-40" />
-                    <p className="text-lg font-medium">
-                      등록된 과제가 없습니다
-                    </p>
-                    <p className="text-sm">
-                      &quot;새 과제 추가&quot; 버튼을 눌러 첫 과제를
-                      등록하세요
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {assignments.map((assignment) => (
-                      <div
-                        key={assignment.id}
-                        className="p-4 rounded-lg border hover:bg-accent/30 transition-colors"
-                      >
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-semibold">
-                                {assignment.title}
-                              </p>
-                              <span
-                                className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${getStatusColor(
-                                  assignment.status
-                                )}`}
-                              >
-                                {assignment.status}
-                              </span>
-                            </div>
-                            <p className="text-sm text-muted-foreground mt-0.5">
-                              {assignment.subject} · 마감:{" "}
-                              {assignment.dueDate}
-                            </p>
-                            {assignment.description && (
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {assignment.description}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setViewingAssignment({
-                                  id: assignment.id,
-                                  title: assignment.title,
-                                });
-                                setSubmissionDialogOpen(true);
-                              }}
-                            >
-                              <Eye className="w-3.5 h-3.5 mr-1" />
-                              제출현황
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                handleDeleteAssignment(assignment.id)
-                              }
-                              className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
-                          </div>
-                        </div>
-
-                        {/* 제출률 + 평균점수 */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="p-3 bg-blue-50 rounded-lg">
-                            <div className="flex items-center justify-between">
-                              <p className="text-xs text-muted-foreground">
-                                제출률
-                              </p>
-                              <Users className="w-3.5 h-3.5 text-blue-500" />
-                            </div>
-                            <div className="flex items-baseline gap-1 mt-1">
-                              <p className="text-2xl font-bold text-blue-600">
-                                {assignment.totalStudents > 0
-                                  ? Math.round(
-                                    (assignment.submissionCount /
-                                      assignment.totalStudents) *
-                                    100
-                                  )
-                                  : 0}
-                                %
-                              </p>
-                              <span className="text-xs text-muted-foreground">
-                                ({assignment.submissionCount}/
-                                {assignment.totalStudents})
-                              </span>
-                            </div>
-                          </div>
-                          <div className="p-3 bg-green-50 rounded-lg">
-                            <div className="flex items-center justify-between">
-                              <p className="text-xs text-muted-foreground">
-                                평균 점수
-                              </p>
-                              <BarChart3 className="w-3.5 h-3.5 text-green-500" />
-                            </div>
-                            <p className="text-2xl font-bold text-green-600 mt-1">
-                              {assignment.avgScore
-                                ? `${assignment.avgScore}점`
-                                : "-"}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* ==================== 공유 탭 ==================== */}
-          <TabsContent value="share" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Share2 className="w-5 h-5" />
-                  {selectedClassName} - 수업현황 공유
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    학부모 또는 학생에게 수업 현황을 공유할 수 있습니다.
-                    <br />
-                    공유 링크를 통해 수업 진도와 과제 현황을 확인할 수
-                    있습니다.
-                  </p>
-                  <Button onClick={handleCreateShareLink}>
-                    <LinkIcon className="w-4 h-4 mr-2" />
-                    공유 링크 생성
-                  </Button>
-                </div>
-
-                {shareLink && (
-                  <div className="p-4 border rounded-lg space-y-3">
-                    <p className="text-sm font-medium">생성된 공유 링크</p>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-muted px-3 py-2 rounded text-sm font-mono truncate">
-                        {shareLink}
-                      </div>
+                      <span className="text-sm text-muted-foreground hidden md:inline">
+                        — {record.content.split('\n')[0].substring(0, 40)}
+                        {record.content.length > 40 ? '...' : ''}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                       <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleCopyLink}
+                        variant="outline" size="sm"
+                        onClick={() => openEditDialog(record)}
                       >
-                        <Copy className="w-4 h-4 mr-1" />
-                        {copied ? "복사됨!" : "복사"}
+                        <Pencil className="w-3.5 h-3.5 mr-1" />
+                        수정
+                      </Button>
+                      <Button
+                        variant="outline" size="sm"
+                        onClick={() => handleDelete(record.id)}
+                        className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      이 링크로 접속하면 {selectedClassName}의 수업 진도와 과제
-                      현황을 확인할 수 있습니다.
-                    </p>
                   </div>
-                )}
 
-                {/* 공유 현황 요약 */}
-                <div>
-                  <p className="text-sm font-medium mb-3">
-                    공유 시 표시되는 정보 미리보기
-                  </p>
-                  <div className="border rounded-lg p-4 space-y-4 bg-white">
-                    <div className="text-center pb-3 border-b">
-                      <p className="text-lg font-bold">
-                        {selectedClassName} 수업 현황
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date().toLocaleDateString("ko-KR")} 기준
-                      </p>
-                    </div>
-
-                    {/* 진도 요약 */}
-                    <div>
-                      <p className="text-sm font-semibold mb-2 flex items-center gap-1">
-                        <BookOpen className="w-4 h-4" />
-                        수업 진도
-                      </p>
-                      <div className="space-y-2">
-                        {lessons.slice(0, 3).map((l) => (
-                          <div
-                            key={l.id}
-                            className="flex items-center justify-between text-sm"
-                          >
-                            <span>
-                              {l.week}주 · {l.title}
-                            </span>
-                            <span
-                              className={`px-2 py-0.5 text-xs rounded-full ${getStatusColor(
-                                l.status
-                              )}`}
-                            >
-                              {l.status} ({l.progress}%)
-                            </span>
+                  {/* 펼친 상태: 상세 */}
+                  {isExpanded && (
+                    <div className="border-t">
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 lg:divide-x">
+                        {/* 왼쪽: 수업 정보 */}
+                        <div className="lg:col-span-2 p-5 space-y-5">
+                          {/* 수업내용 */}
+                          <div>
+                            <h4 className="text-sm font-semibold flex items-center gap-1.5 mb-2 text-blue-700">
+                              <FileText className="w-4 h-4" />
+                              수업내용
+                            </h4>
+                            <div className="bg-blue-50/50 rounded-lg p-3 text-sm whitespace-pre-line leading-relaxed">
+                              {record.content}
+                            </div>
                           </div>
-                        ))}
-                        {lessons.length > 3 && (
-                          <p className="text-xs text-muted-foreground text-center">
-                            +{lessons.length - 3}개 더 보기
-                          </p>
-                        )}
+
+                          {/* 과제 결과 + 다음 과제 + 테스트 결과 */}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                              <h4 className="text-sm font-semibold flex items-center gap-1.5 mb-2 text-green-700">
+                                <CheckCircle2 className="w-4 h-4" />
+                                과제 결과
+                              </h4>
+                              <div className="bg-green-50/50 rounded-lg p-3 text-sm min-h-[60px]">
+                                {record.assignmentResult || (
+                                  <span className="text-muted-foreground italic">기록 없음</span>
+                                )}
+                              </div>
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-semibold flex items-center gap-1.5 mb-2 text-orange-700">
+                                <ClipboardList className="w-4 h-4" />
+                                다음 과제
+                              </h4>
+                              <div className="bg-orange-50/50 rounded-lg p-3 text-sm min-h-[60px]">
+                                {record.nextAssignment || (
+                                  <span className="text-muted-foreground italic">기록 없음</span>
+                                )}
+                              </div>
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-semibold flex items-center gap-1.5 mb-2 text-purple-700">
+                                <ListChecks className="w-4 h-4" />
+                                테스트 결과
+                              </h4>
+                              <div className="bg-purple-50/50 rounded-lg p-3 text-sm min-h-[60px]">
+                                {record.testResult || (
+                                  <span className="text-muted-foreground italic">기록 없음</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* 출석/지각 현황 */}
+                          <div>
+                            <h4 className="text-sm font-semibold flex items-center gap-1.5 mb-2 text-teal-700">
+                              <Users className="w-4 h-4" />
+                              출석/지각 현황
+                            </h4>
+                            <div className="border rounded-lg p-3">
+                              <AttendanceTable lessonRecordId={record.id} classId={selectedClass} />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 오른쪽: 코멘트 */}
+                        <div className="p-5 bg-muted/20">
+                          <CommentSection lessonRecordId={record.id} />
+                        </div>
                       </div>
                     </div>
-
-                    {/* 과제 요약 */}
-                    <div>
-                      <p className="text-sm font-semibold mb-2 flex items-center gap-1">
-                        <ClipboardList className="w-4 h-4" />
-                        과제 현황
-                      </p>
-                      <div className="space-y-2">
-                        {assignments.slice(0, 3).map((a) => (
-                          <div
-                            key={a.id}
-                            className="flex items-center justify-between text-sm"
-                          >
-                            <span>{a.title}</span>
-                            <span className="text-xs text-muted-foreground">
-                              마감: {a.dueDate}
-                            </span>
-                          </div>
-                        ))}
-                        {assignments.length > 3 && (
-                          <p className="text-xs text-muted-foreground text-center">
-                            +{assignments.length - 3}개 더 보기
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                  )}
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Dialogs */}
-      <ProgressEditDialog
-        lesson={editingLesson}
-        open={progressDialogOpen}
-        onOpenChange={setProgressDialogOpen}
-        onSubmit={handleUpdateLesson}
-        isLoading={actionLoading}
-      />
-
-      <SubmissionDetail
-        assignmentId={viewingAssignment?.id ?? null}
-        assignmentTitle={viewingAssignment?.title ?? ""}
-        open={submissionDialogOpen}
-        onOpenChange={setSubmissionDialogOpen}
-      />
+      {/* ========== 수정 다이얼로그 ========== */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>수업 기록 수정</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>날짜</Label>
+                <Input type="date" value={editForm.date} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>시간</Label>
+                <Input value={editForm.time} onChange={(e) => setEditForm({ ...editForm, time: e.target.value })} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>수업내용</Label>
+              <textarea
+                rows={4}
+                className="w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                value={editForm.content}
+                onChange={(e) => setEditForm({ ...editForm, content: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>과제 결과</Label>
+              <Input value={editForm.assignmentResult} onChange={(e) => setEditForm({ ...editForm, assignmentResult: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>다음 과제</Label>
+              <Input value={editForm.nextAssignment} onChange={(e) => setEditForm({ ...editForm, nextAssignment: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>테스트 결과</Label>
+              <Input value={editForm.testResult} onChange={(e) => setEditForm({ ...editForm, testResult: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">취소</Button>
+            </DialogClose>
+            <Button onClick={handleUpdate} disabled={actionLoading}>
+              {actionLoading ? "저장 중..." : "저장"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
