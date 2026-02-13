@@ -1,5 +1,7 @@
-const HUB_URL = process.env.NEXT_PUBLIC_HUB_URL || 'http://localhost:3000';
-const HUB_API_URL = process.env.NEXT_PUBLIC_HUB_API_URL || 'http://localhost:4000';
+import { config } from './config';
+
+const HUB_URL = config.hubUrl;
+const HUB_API_URL = config.hubApiUrl;
 const SERVICE_ID = 'teacheradmin';
 
 export function redirectToHubLogin() {

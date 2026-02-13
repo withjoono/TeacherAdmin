@@ -19,8 +19,11 @@ import {
     XCircle,
     Lock,
     Users,
+    Loader2,
 } from "lucide-react";
 import { useAttendanceStore } from "@/lib/stores/attendance-store";
+import { getMyClasses, getClassStudents, bulkCheckAttendance } from "@/lib/api/teacher";
+import type { ClassInfo, StudentInfo } from "@/lib/api/teacher";
 
 // ==================== Types ====================
 interface Student {
@@ -28,37 +31,6 @@ interface Student {
     name: string;
     password: string;
 }
-
-// ==================== Mock Data ====================
-const mockClasses = [
-    { id: "class-a", name: "A반", subject: "수학" },
-    { id: "class-b", name: "B반", subject: "영어" },
-    { id: "class-c", name: "C반", subject: "국어" },
-];
-
-const mockStudentsByClass: Record<string, Student[]> = {
-    "class-a": [
-        { id: 1, name: "김철수", password: "1234" },
-        { id: 2, name: "이영희", password: "1234" },
-        { id: 3, name: "박민수", password: "1234" },
-        { id: 4, name: "정수현", password: "1234" },
-        { id: 5, name: "최동현", password: "1234" },
-        { id: 6, name: "강민재", password: "1234" },
-        { id: 7, name: "한지원", password: "1234" },
-        { id: 8, name: "윤서연", password: "1234" },
-    ],
-    "class-b": [
-        { id: 9, name: "송예진", password: "1234" },
-        { id: 10, name: "조민서", password: "1234" },
-        { id: 11, name: "임하늘", password: "1234" },
-        { id: 12, name: "배수지", password: "1234" },
-    ],
-    "class-c": [
-        { id: 13, name: "오지훈", password: "1234" },
-        { id: 14, name: "노유진", password: "1234" },
-        { id: 15, name: "문태양", password: "1234" },
-    ],
-};
 
 function sortByName(students: Student[]): Student[] {
     return [...students].sort((a, b) => a.name.localeCompare(b.name, "ko"));
@@ -81,8 +53,10 @@ function getCircleColor(index: number) {
 
 // ==================== 메인 페이지 ====================
 export default function AttendancePage() {
-    const [selectedClass, setSelectedClass] = useState(mockClasses[0].id);
+    const [classes, setClasses] = useState<Array<{ id: string; name: string; subject: string }>>([]);
+    const [selectedClass, setSelectedClass] = useState("");
     const [students, setStudents] = useState<Student[]>([]);
+    const [loading, setLoading] = useState(true);
 
     // 비밀번호 다이얼로그
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -95,18 +69,57 @@ export default function AttendancePage() {
     const { checkIn, getClassRecords, resetClass } = useAttendanceStore();
     const classRecords = useAttendanceStore((s) => s.records[selectedClass] || {});
 
-    const selectedClassInfo = mockClasses.find((c) => c.id === selectedClass);
+    const selectedClassInfo = classes.find((c) => c.id === selectedClass);
+
+    // 반 목록 로드
+    useEffect(() => {
+        async function fetchClasses() {
+            try {
+                setLoading(true);
+                const data = await getMyClasses();
+                const mapped = (data || []).map((c: ClassInfo) => ({
+                    id: c.id,
+                    name: c.name,
+                    subject: c.subject || '',
+                }));
+                setClasses(mapped);
+                if (mapped.length > 0) {
+                    setSelectedClass(mapped[0].id);
+                }
+            } catch (err) {
+                console.error('Failed to fetch classes:', err);
+                setClasses([]);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchClasses();
+    }, []);
 
     // 학생 로드 + 스토어 초기화
     useEffect(() => {
-        const raw = mockStudentsByClass[selectedClass] || [];
-        setStudents(sortByName(raw));
+        if (!selectedClass) return;
+        async function fetchStudents() {
+            try {
+                const data = await getClassStudents(selectedClass);
+                const mapped: Student[] = (data || []).map((s: StudentInfo) => ({
+                    id: typeof s.id === 'string' ? parseInt(s.id, 10) || 0 : Number(s.id),
+                    name: s.name,
+                    password: "1234", // Default password for attendance check-in
+                }));
+                setStudents(sortByName(mapped));
 
-        // 기존 기록이 없으면 초기화
-        const existing = getClassRecords(selectedClass);
-        if (Object.keys(existing).length === 0) {
-            resetClass(selectedClass, raw);
+                // 기존 기록이 없으면 초기화
+                const existing = getClassRecords(selectedClass);
+                if (Object.keys(existing).length === 0) {
+                    resetClass(selectedClass, mapped);
+                }
+            } catch (err) {
+                console.error('Failed to fetch students:', err);
+                setStudents([]);
+            }
         }
+        fetchStudents();
     }, [selectedClass, getClassRecords, resetClass]);
 
     // 학생 클릭
@@ -120,14 +133,25 @@ export default function AttendancePage() {
         setDialogOpen(true);
     };
 
-    // 비밀번호 확인 → 스토어에 체크인
-    const handlePasswordSubmit = () => {
+    // 비밀번호 확인 → 스토어에 체크인 + API 저장
+    const handlePasswordSubmit = async () => {
         if (!selectedStudent) return;
 
         if (password === selectedStudent.password) {
             checkIn(selectedClass, selectedStudent.id, selectedStudent.name);
             setSuccess(true);
             setError("");
+
+            // API에 출석 저장
+            try {
+                await bulkCheckAttendance(selectedClass, {
+                    date: new Date().toISOString().split('T')[0],
+                    records: [{ studentId: String(selectedStudent.id), status: 'present' }],
+                });
+            } catch (err) {
+                console.error('Failed to save attendance to API:', err);
+            }
+
             setTimeout(() => {
                 setDialogOpen(false);
                 setSuccess(false);
@@ -151,6 +175,17 @@ export default function AttendancePage() {
         (e) => e.status === "출석"
     ).length;
 
+    if (loading) {
+        return (
+            <div className="flex flex-col">
+                <Header title="출석부" />
+                <div className="flex-1 flex items-center justify-center p-6">
+                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="flex flex-col">
             <Header title="출석부" />
@@ -163,13 +198,13 @@ export default function AttendancePage() {
                             <span className="text-sm font-medium text-muted-foreground mr-2">
                                 반 선택
                             </span>
-                            {mockClasses.map((cls) => (
+                            {classes.map((cls) => (
                                 <button
                                     key={cls.id}
                                     onClick={() => setSelectedClass(cls.id)}
                                     className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${cls.id === selectedClass
-                                            ? "bg-primary text-primary-foreground shadow-md"
-                                            : "bg-muted hover:bg-muted/80"
+                                        ? "bg-primary text-primary-foreground shadow-md"
+                                        : "bg-muted hover:bg-muted/80"
                                         }`}
                                 >
                                     {cls.name}
@@ -213,54 +248,60 @@ export default function AttendancePage() {
                 {/* 학생 그리드 */}
                 <Card>
                     <CardContent className="p-8">
-                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-6 justify-items-center">
-                            {students.map((student, idx) => {
-                                const entry = classRecords[student.id];
-                                const isCheckedIn = entry?.status === "출석";
+                        {students.length > 0 ? (
+                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-6 justify-items-center">
+                                {students.map((student, idx) => {
+                                    const entry = classRecords[student.id];
+                                    const isCheckedIn = entry?.status === "출석";
 
-                                return (
-                                    <button
-                                        key={student.id}
-                                        onClick={() => handleStudentClick(student)}
-                                        className={`group flex flex-col items-center gap-2 transition-all ${isCheckedIn
+                                    return (
+                                        <button
+                                            key={student.id}
+                                            onClick={() => handleStudentClick(student)}
+                                            className={`group flex flex-col items-center gap-2 transition-all ${isCheckedIn
                                                 ? "cursor-default"
                                                 : "cursor-pointer hover:scale-105"
-                                            }`}
-                                    >
-                                        <div
-                                            className={`relative w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg transition-all ${isCheckedIn
+                                                }`}
+                                        >
+                                            <div
+                                                className={`relative w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg transition-all ${isCheckedIn
                                                     ? "bg-gradient-to-br from-green-400 to-green-600 ring-4 ring-green-200"
                                                     : `bg-gradient-to-br ${getCircleColor(idx)} group-hover:shadow-xl group-hover:ring-4 group-hover:ring-primary/20`
-                                                }`}
-                                        >
-                                            <span className="text-center leading-tight">
-                                                {student.name.length <= 3
-                                                    ? student.name
-                                                    : student.name.substring(0, 2)}
-                                            </span>
-                                            {isCheckedIn && (
-                                                <div className="absolute -top-1 -right-1 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-md">
-                                                    <CheckCircle2 className="w-5 h-5 text-green-500" />
-                                                </div>
-                                            )}
-                                        </div>
-                                        <span
-                                            className={`text-xs font-medium ${isCheckedIn
+                                                    }`}
+                                            >
+                                                <span className="text-center leading-tight">
+                                                    {student.name.length <= 3
+                                                        ? student.name
+                                                        : student.name.substring(0, 2)}
+                                                </span>
+                                                {isCheckedIn && (
+                                                    <div className="absolute -top-1 -right-1 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-md">
+                                                        <CheckCircle2 className="w-5 h-5 text-green-500" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <span
+                                                className={`text-xs font-medium ${isCheckedIn
                                                     ? "text-green-600"
                                                     : "text-muted-foreground group-hover:text-foreground"
-                                                }`}
-                                        >
-                                            {student.name}
-                                        </span>
-                                        {isCheckedIn && entry?.checkedInAt && (
-                                            <span className="text-[10px] text-green-500 -mt-1">
-                                                {entry.checkedInAt}
+                                                    }`}
+                                            >
+                                                {student.name}
                                             </span>
-                                        )}
-                                    </button>
-                                );
-                            })}
-                        </div>
+                                            {isCheckedIn && entry?.checkedInAt && (
+                                                <span className="text-[10px] text-green-500 -mt-1">
+                                                    {entry.checkedInAt}
+                                                </span>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="text-center text-sm text-muted-foreground py-8">
+                                반을 선택하면 학생 목록이 표시됩니다
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 

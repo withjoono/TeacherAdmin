@@ -38,29 +38,29 @@ export const tokenManager = {
     if (typeof window === 'undefined') return null;
     return localStorage.getItem('accessToken');
   },
-  
+
   getRefreshToken: () => {
     if (typeof window === 'undefined') return null;
     return localStorage.getItem('refreshToken');
   },
-  
+
   setTokens: (accessToken: string, refreshToken: string) => {
     if (typeof window === 'undefined') return;
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('refreshToken', refreshToken);
   },
-  
+
   setAccessToken: (accessToken: string) => {
     if (typeof window === 'undefined') return;
     localStorage.setItem('accessToken', accessToken);
   },
-  
+
   clearTokens: () => {
     if (typeof window === 'undefined') return;
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
   },
-  
+
   hasTokens: () => {
     if (typeof window === 'undefined') return false;
     return !!(localStorage.getItem('accessToken') && localStorage.getItem('refreshToken'));
@@ -124,10 +124,11 @@ authClient.interceptors.response.use(
 
       const refreshToken = tokenManager.getRefreshToken();
       if (!refreshToken) {
-        // 리프레시 토큰이 없으면 로그아웃
+        // 리프레시 토큰이 없으면 Hub SSO 로그인으로 리다이렉트
         tokenManager.clearTokens();
         if (typeof window !== 'undefined') {
-          window.location.href = '/auth/login';
+          const { redirectToHubLogin } = await import('../sso');
+          redirectToHubLogin();
         }
         return Promise.reject(error);
       }
@@ -150,11 +151,12 @@ authClient.interceptors.response.use(
         }
         return authClient(originalRequest);
       } catch (refreshError) {
-        // 토큰 갱신 실패 시 로그아웃
+        // 토큰 갱신 실패 시 Hub SSO 로그인으로 리다이렉트
         processQueue(refreshError, null);
         tokenManager.clearTokens();
         if (typeof window !== 'undefined') {
-          window.location.href = '/auth/login';
+          const { redirectToHubLogin } = await import('../sso');
+          redirectToHubLogin();
         }
         return Promise.reject(refreshError);
       } finally {

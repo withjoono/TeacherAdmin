@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header } from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,74 +13,70 @@ import {
   Calendar,
   FileText,
   Home,
+  Loader2,
 } from "lucide-react";
+import { getMyClasses, getClassStudents } from "@/lib/api/teacher";
+import type { ClassInfo, StudentInfo } from "@/lib/api/teacher";
 
-// Mock 데이터
-const mockParents = [
-  {
-    id: 1,
-    name: "김영수",
-    studentName: "김철수",
-    class: "A반",
-    phone: "010-1234-5678",
-    email: "parent1@example.com",
-    lastContact: "2일 전",
-    unreadMessages: 1,
-  },
-  {
-    id: 2,
-    name: "이미숙",
-    studentName: "이영희",
-    class: "A반",
-    phone: "010-2345-6789",
-    email: "parent2@example.com",
-    lastContact: "1주일 전",
-    unreadMessages: 0,
-  },
-  {
-    id: 3,
-    name: "박준호",
-    studentName: "박민수",
-    class: "A반",
-    phone: "010-3456-7890",
-    email: "parent3@example.com",
-    lastContact: "3일 전",
-    unreadMessages: 2,
-  },
-];
-
-const mockReports = [
-  {
-    id: 1,
-    studentName: "김철수",
-    title: "3월 중간고사 결과 리포트",
-    date: "2025-03-18",
-    status: "발송완료",
-  },
-  {
-    id: 2,
-    studentName: "이영희",
-    title: "3월 학습 진도 리포트",
-    date: "2025-03-15",
-    status: "발송완료",
-  },
-  {
-    id: 3,
-    studentName: "박민수",
-    title: "출결 현황 안내",
-    date: "2025-03-12",
-    status: "미발송",
-  },
-];
+interface ParentInfo {
+  id: string;
+  name: string;
+  studentName: string;
+  className: string;
+  phone: string;
+  email: string;
+}
 
 export default function ParentManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [parents, setParents] = useState<ParentInfo[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredParents = mockParents.filter(
+  // 학생 목록에서 학부모 정보 생성
+  useEffect(() => {
+    async function fetchParentInfo() {
+      try {
+        setLoading(true);
+        const classes = await getMyClasses();
+        const parentPromises = (classes || []).map(async (cls: ClassInfo) => {
+          const students = await getClassStudents(cls.id);
+          return (students || []).map((s: StudentInfo) => ({
+            id: `parent-${s.id}`,
+            name: `${s.name} 학부모`,
+            studentName: s.name,
+            className: cls.name,
+            phone: '',
+            email: '',
+          }));
+        });
+        const results = await Promise.all(parentPromises);
+        setParents(results.flat());
+      } catch (err) {
+        console.error('Failed to fetch parent info:', err);
+        setParents([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchParentInfo();
+  }, []);
+
+  const filteredParents = parents.filter(
     (parent) =>
       parent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       parent.studentName.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (loading) {
+    return (
+      <div className="flex flex-col">
+        <Header title="학부모 관리" />
+        <div className="flex-1 flex items-center justify-center p-6">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col">
@@ -114,138 +110,43 @@ export default function ParentManagementPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {filteredParents.map((parent) => (
-                <div
-                  key={parent.id}
-                  className="p-4 rounded-lg border hover:bg-accent/50 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
-                        <Home className="w-6 h-6 text-purple-600" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
+            {filteredParents.length > 0 ? (
+              <div className="space-y-3">
+                {filteredParents.map((parent) => (
+                  <div
+                    key={parent.id}
+                    className="p-4 rounded-lg border hover:bg-accent/50 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
+                          <Home className="w-6 h-6 text-purple-600" />
+                        </div>
+                        <div>
                           <p className="font-medium">{parent.name}</p>
-                          {parent.unreadMessages > 0 && (
-                            <span className="px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700 rounded-full">
-                              {parent.unreadMessages}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          자녀: {parent.studentName} ({parent.class})
-                        </p>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Phone className="w-3 h-3" />
-                            {parent.phone}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Mail className="w-3 h-3" />
-                            {parent.email}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            최근 연락: {parent.lastContact}
-                          </span>
+                          <p className="text-sm text-muted-foreground">
+                            자녀: {parent.studentName} ({parent.className})
+                          </p>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
-                        <Phone className="w-4 h-4 mr-2" />
-                        전화
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <MessageSquare className="w-4 h-4 mr-2" />
-                        쪽지
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Mail className="w-4 h-4 mr-2" />
-                        이메일
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm">
+                          <MessageSquare className="w-4 h-4 mr-2" />
+                          쪽지
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* 발송 리포트 */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>학부모 리포트 관리</CardTitle>
-              <Button size="sm">
-                <FileText className="w-4 h-4 mr-2" />
-                새 리포트 작성
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {mockReports.map((report) => (
-                <div
-                  key={report.id}
-                  className="flex items-center justify-between p-4 rounded-lg border"
-                >
-                  <div>
-                    <p className="font-medium">{report.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {report.studentName} | {report.date}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        report.status === "발송완료"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-orange-100 text-orange-700"
-                      }`}
-                    >
-                      {report.status}
-                    </span>
-                    <Button variant="outline" size="sm">
-                      {report.status === "발송완료" ? "다시보기" : "발송하기"}
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-sm text-muted-foreground py-8">
+                {searchTerm ? '검색 결과가 없습니다' : '등록된 학부모가 없습니다'}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
