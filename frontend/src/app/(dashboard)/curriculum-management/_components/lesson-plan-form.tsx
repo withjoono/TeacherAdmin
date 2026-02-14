@@ -14,11 +14,11 @@ import {
     DialogClose,
 } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
-import type { CreateLessonRecordDto } from "@/lib/api/curriculum";
+import type { CreateLessonRecordData } from "@/lib/api/curriculum";
 
 interface LessonRecordFormProps {
     classId: string;
-    onSubmit: (data: CreateLessonRecordDto) => void;
+    onSubmit: (data: CreateLessonRecordData) => void;
     isLoading?: boolean;
 }
 
@@ -33,9 +33,12 @@ export function LessonRecordForm({ classId, onSubmit, isLoading }: LessonRecordF
 
     const handleSubmit = () => {
         if (!date || !time || !content) return;
+        const days = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+        const dayOfWeek = days[new Date(date).getDay()] || '';
         onSubmit({
             classId,
             date,
+            dayOfWeek,
             time,
             content,
             assignmentResult: assignmentResult || undefined,

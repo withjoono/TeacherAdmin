@@ -38,7 +38,8 @@ export function AttendanceTable({ lessonRecordId, classId }: AttendanceTableProp
 
     // 스토어의 출석 기록을 반영 (출석부에서 체크인된 학생)
     const mergedRecords = records.map((record) => {
-        const storeEntry = storeRecords[record.studentId];
+        if (!record) return record; // Safety check
+        const storeEntry = storeRecords[Number(record.studentId)];
         if (storeEntry?.status === '출석' && record.attendance !== '출석') {
             return {
                 ...record,
@@ -49,7 +50,7 @@ export function AttendanceTable({ lessonRecordId, classId }: AttendanceTableProp
         return record;
     });
 
-    const handleAttendanceChange = (studentId: number, attendance: string) => {
+    const handleAttendanceChange = (studentId: string, attendance: string) => {
         setRecords(prev =>
             prev.map(r => r.studentId === studentId ? { ...r, attendance: attendance as any } : r)
         );
@@ -119,7 +120,7 @@ export function AttendanceTable({ lessonRecordId, classId }: AttendanceTableProp
             {/* 학생 목록 */}
             <div className="space-y-1.5">
                 {mergedRecords.map((record) => {
-                    const storeEntry = storeRecords[record.studentId];
+                    const storeEntry = storeRecords[Number(record.studentId)];
                     const fromAttendancePage = storeEntry?.status === '출석';
 
                     return (
@@ -145,8 +146,8 @@ export function AttendanceTable({ lessonRecordId, classId }: AttendanceTableProp
                                         key={opt.value}
                                         onClick={() => handleAttendanceChange(record.studentId, opt.value)}
                                         className={`px-2 py-1 text-xs rounded-md border transition-all flex items-center gap-1 ${record.attendance === opt.value
-                                                ? opt.color + ' font-semibold shadow-sm'
-                                                : 'bg-white text-gray-400 border-gray-200 hover:bg-gray-50'
+                                            ? opt.color + ' font-semibold shadow-sm'
+                                            : 'bg-white text-gray-400 border-gray-200 hover:bg-gray-50'
                                             }`}
                                     >
                                         {opt.icon}

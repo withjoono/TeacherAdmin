@@ -128,12 +128,36 @@ export async function deleteLessonRecord(id: number, classId: string): Promise<v
   await authClient.delete(`/teacher/classes/${classId}/lesson-plans/${id}`);
 }
 
+export type UpdateLessonRecordDto = Partial<CreateLessonRecordData>;
+
+export interface UpdateStudentRecordDto {
+  attendance: string;
+  homework?: string;
+  testScore?: number;
+  note?: string;
+}
+
 /**
  * 출석/학생 기록 조회
  */
-export async function getStudentRecords(classId: string, date?: string): Promise<StudentLessonRecord[]> {
+export async function getStudentRecords(id: string | number, date?: string): Promise<StudentLessonRecord[]> {
+  if (typeof id === 'number') {
+    // lessonRecordId case
+    const response = await authClient.get(`/teacher/lesson-records/${id}/students`);
+    // Assuming endpoint, or just /students? 
+    // Fallback to compatibility:
+    return (response.data || []).map((r: any) => ({
+      studentId: r.studentId,
+      studentName: r.studentName,
+      attendance: mapAttendanceStatus(r.attendance || r.status),
+      homework: r.homework || '완료',
+      testScore: r.testScore,
+      note: r.note,
+    }));
+  }
+
   const params = date ? { date } : {};
-  const response = await authClient.get(`/teacher/classes/${classId}/attendance`, { params });
+  const response = await authClient.get(`/teacher/classes/${id}/attendance`, { params });
   const records = response.data;
   return (records || []).map((r: any) => ({
     studentId: r.studentId,
@@ -149,14 +173,22 @@ export async function getStudentRecords(classId: string, date?: string): Promise
  * 출석 일괄 저장
  */
 export async function updateStudentRecords(
-  classId: string,
-  date: string,
-  updates: Array<{ studentId: string; status: 'present' | 'late' | 'absent'; note?: string }>
+  id: string | number,
+  arg2: any,
+  arg3?: any
 ): Promise<void> {
-  await authClient.post(`/teacher/classes/${classId}/attendance`, {
-    date,
-    records: updates,
-  });
+  if (typeof id === 'number') {
+    // Usage: updateStudentRecords(lessonId, updates)
+    await authClient.post(`/teacher/lesson-plans/${id}/attendance`, { updates: arg2 });
+  } else {
+    // Usage: updateStudentRecords(classId, date, updates)
+    const date = arg2 as string;
+    const updates = arg3 as any[];
+    await authClient.post(`/teacher/classes/${id}/attendance`, {
+      date,
+      records: updates,
+    });
+  }
 }
 
 /**

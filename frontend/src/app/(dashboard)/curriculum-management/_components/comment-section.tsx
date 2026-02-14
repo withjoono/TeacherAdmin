@@ -41,7 +41,7 @@ export function CommentSection({ lessonRecordId }: CommentSectionProps) {
 
     useEffect(() => {
         setLoading(true);
-        getComments(lessonRecordId)
+        getComments(String(lessonRecordId))
             .then(setComments)
             .finally(() => setLoading(false));
     }, [lessonRecordId]);
@@ -54,7 +54,7 @@ export function CommentSection({ lessonRecordId }: CommentSectionProps) {
         if (!message.trim()) return;
         setSending(true);
         try {
-            const newComment = await addComment(lessonRecordId, message.trim());
+            const newComment = await addComment(String(lessonRecordId), message.trim());
             setComments(prev => [...prev, newComment]);
             setMessage("");
         } finally {
@@ -95,8 +95,9 @@ export function CommentSection({ lessonRecordId }: CommentSectionProps) {
                     </p>
                 ) : (
                     comments.map((comment) => {
-                        const style = roleStyles[comment.authorRole] || roleStyles['학생'];
-                        const isTeacher = comment.authorRole === '선생님';
+                        const authorRole = comment.author || '선생님';
+                        const style = roleStyles[authorRole] || roleStyles['학생'];
+                        const isTeacher = authorRole === '선생님';
 
                         return (
                             <div
@@ -105,14 +106,14 @@ export function CommentSection({ lessonRecordId }: CommentSectionProps) {
                             >
                                 {/* 이름 + 역할 */}
                                 <div className={`flex items-center gap-1.5 mb-1 ${isTeacher ? 'flex-row-reverse' : ''}`}>
-                                    <span className="text-xs font-medium">{comment.authorName}</span>
+                                    <span className="text-xs font-medium">{comment.author}</span>
                                     <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded-full ${style.badge}`}>
-                                        {comment.authorRole}
+                                        {authorRole}
                                     </span>
                                 </div>
                                 {/* 말풍선 */}
                                 <div className={`max-w-[80%] px-3.5 py-2.5 text-sm shadow-sm ${style.bubble}`}>
-                                    {comment.message}
+                                    {comment.content}
                                 </div>
                                 <span className="text-[10px] text-muted-foreground mt-1">
                                     {formatTime(comment.createdAt)}
