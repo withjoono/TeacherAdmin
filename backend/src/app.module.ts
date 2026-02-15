@@ -1,10 +1,25 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { ConfigModule } from '@nestjs/config';
+import { AuthModule } from './auth/auth.module';
+import { PrismaModule } from './prisma';
+import { ClassesModule } from './classes/classes.module';
 
 @Module({
-  imports: [],
-  controllers: [AppController],
-  providers: [AppService],
+  imports: [
+    // 환경변수 설정
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['.env.local', '.env'],
+    }),
+
+    // 인증 (Hub SSO)
+    AuthModule,
+
+    // 데이터베이스 (Prisma)
+    PrismaModule,
+
+    // 기능 모듈
+    ClassesModule,
+  ],
 })
-export class AppModule {}
+export class AppModule { }

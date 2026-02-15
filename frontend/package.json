@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3020",
+    "dev": "next dev -p 3019",
     "build": "next build",
-    "start": "next start -p 3020",
+    "start": "next start -p 3019",
     "lint": "eslint"
   },
   "dependencies": {
@@ -22,6 +22,7 @@
     "react-dom": "19.2.3",
     "react-dropzone": "^14.3.8",
     "react-hook-form": "^7.69.0",
+    "recharts": "^3.7.0",
     "tailwind-merge": "^3.4.0",
     "xlsx": "^0.18.5",
     "zod": "^4.2.1",

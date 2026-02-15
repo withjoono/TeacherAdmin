@@ -110,8 +110,32 @@ export interface PrivateComment {
 // ===== Dashboard =====
 
 export async function getDashboard(): Promise<DashboardStats> {
-    const response = await authClient.get('/teacher/dashboard');
-    return response.data;
+    try {
+        // Arena 클래스 API에서 실제 데이터 가져오기
+        const response = await authClient.get('/api/classes');
+        const classes = response.data || [];
+        const totalStudents = classes.reduce((sum: number, c: any) => sum + (c.memberCount || 0), 0);
+        return {
+            totalClasses: classes.length,
+            totalStudents,
+            pendingAssignments: 0,
+            upcomingExams: 0,
+            unreadMessages: 0,
+            todayLessons: [],
+            recentActivities: [],
+        };
+    } catch {
+        // 미인증 상태 등에선 기본값 반환
+        return {
+            totalClasses: 0,
+            totalStudents: 0,
+            pendingAssignments: 0,
+            upcomingExams: 0,
+            unreadMessages: 0,
+            todayLessons: [],
+            recentActivities: [],
+        };
+    }
 }
 
 // ===== Classes =====

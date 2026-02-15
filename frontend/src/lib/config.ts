@@ -6,10 +6,10 @@ const isDev = process.env.NODE_ENV === 'development';
 
 export const config = {
   // TutorBoard Backend API URL
-  apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4005',
+  apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4019',
 
   // Frontend URL
-  frontUrl: process.env.NEXT_PUBLIC_FRONT_URL || 'http://localhost:3020',
+  frontUrl: process.env.NEXT_PUBLIC_FRONT_URL || 'http://localhost:3019',
 
   // Hub SSO URLs
   hubUrl: process.env.NEXT_PUBLIC_HUB_URL || 'http://localhost:3000',

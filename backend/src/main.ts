@@ -1,8 +1,25 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { Logger } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  await app.listen(process.env.PORT ?? 3000);
+  const logger = new Logger('Bootstrap');
+
+  // CORS 설정 (teacher_admin 프론트엔드 허용)
+  app.enableCors({
+    origin: [
+      'http://localhost:3019',  // teacher_admin frontend
+      'http://localhost:3006',  // StudyArena frontend
+    ],
+    credentials: true,
+  });
+
+  // 글로벌 prefix
+  app.setGlobalPrefix('api');
+
+  const port = process.env.PORT ?? 4019;
+  await app.listen(port);
+  logger.log(`Teacher Admin 백엔드 서버가 포트 ${port}에서 실행 중입니다.`);
 }
 bootstrap();
