@@ -140,8 +140,8 @@ export default function ClassManagementPage() {
                   key={cls.id}
                   onClick={() => setSelectedClass(cls.id)}
                   className={`px-6 py-3 rounded-lg font-semibold transition-all ${cls.id === selectedClass
-                      ? "bg-primary text-primary-foreground shadow-md"
-                      : "bg-muted hover:bg-muted/80"
+                    ? "bg-primary text-primary-foreground shadow-md"
+                    : "bg-muted hover:bg-muted/80"
                     }`}
                 >
                   {cls.name}
@@ -243,7 +243,7 @@ export default function ClassManagementPage() {
                 </div>
               </CardContent>
             </Card>
-            <Link href={`/class-management/${selectedArena.id}/students`}>
+            <Link href={`/class-management/students?id=${selectedArena.id}`}>
               <Card className="cursor-pointer hover:shadow-md transition-shadow h-full">
                 <CardContent className="p-4 flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-green-100">
@@ -258,7 +258,7 @@ export default function ClassManagementPage() {
                 </CardContent>
               </Card>
             </Link>
-            <Link href={`/class-management/${selectedArena.id}/stats`}>
+            <Link href={`/class-management/stats?id=${selectedArena.id}`}>
               <Card className="cursor-pointer hover:shadow-md transition-shadow h-full">
                 <CardContent className="p-4 flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-purple-100">
@@ -286,7 +286,7 @@ export default function ClassManagementPage() {
                   멤버 목록
                 </CardTitle>
                 <Link
-                  href={`/class-management/${selectedClass}/students`}
+                  href={`/class-management/students?id=${selectedClass}`}
                 >
                   <Button size="sm" variant="outline">
                     <UserPlus className="w-4 h-4 mr-2" />
@@ -320,8 +320,8 @@ export default function ClassManagementPage() {
                       </div>
                       <span
                         className={`text-xs px-2 py-1 rounded-full ${member.role === "owner"
-                            ? "bg-yellow-100 text-yellow-700"
-                            : "bg-blue-100 text-blue-700"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : "bg-blue-100 text-blue-700"
                           }`}
                       >
                         {member.role === "owner" ? "관리자" : "학생"}

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Suspense } from "react";
 import { Header } from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,17 +17,16 @@ import {
 import { importStudentsToClass } from "@/lib/api/classes";
 import type { ImportStudentsResult } from "@/lib/api/classes";
 
-export default function StudentImportPage() {
-    const params = useParams();
+function StudentImportContent() {
+    const searchParams = useSearchParams();
     const router = useRouter();
-    const classId = Number(params.id);
+    const classId = Number(searchParams.get("id") || "0");
 
     const [inputText, setInputText] = useState("");
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<ImportStudentsResult | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    // ID 파싱: 줄바꿈, 콤마, 탭, 세미콜론으로 분리
     const parseIds = (text: string): string[] => {
         return text
             .split(/[\n\r,;\t]+/)
@@ -56,22 +56,27 @@ export default function StudentImportPage() {
         }
     };
 
+    if (!classId) {
+        return (
+            <div className="flex flex-col">
+                <Header title="학생 일괄 등록" />
+                <div className="flex-1 p-6 text-center text-muted-foreground">
+                    클래스 ID가 필요합니다.
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="flex flex-col">
             <Header title="학생 일괄 등록" />
 
             <div className="flex-1 p-6 space-y-6 max-w-4xl mx-auto w-full">
-                {/* 뒤로가기 */}
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => router.back()}
-                >
+                <Button variant="outline" size="sm" onClick={() => router.back()}>
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     돌아가기
                 </Button>
 
-                {/* 안내 */}
                 <Card className="border-blue-200 bg-blue-50/50">
                     <CardContent className="p-4">
                         <div className="flex gap-3">
@@ -85,7 +90,6 @@ export default function StudentImportPage() {
                     </CardContent>
                 </Card>
 
-                {/* ID 입력 영역 */}
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -110,11 +114,7 @@ export default function StudentImportPage() {
                                     ? `${parsedIds.length}개의 ID가 감지되었습니다`
                                     : "ID를 입력해주세요"}
                             </p>
-                            <Button
-                                onClick={handleSubmit}
-                                disabled={loading || parsedIds.length === 0}
-                                size="lg"
-                            >
+                            <Button onClick={handleSubmit} disabled={loading || parsedIds.length === 0} size="lg">
                                 {loading ? (
                                     <>
                                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -131,7 +131,6 @@ export default function StudentImportPage() {
                     </CardContent>
                 </Card>
 
-                {/* 에러 표시 */}
                 {error && (
                     <Card className="border-red-300 bg-red-50">
                         <CardContent className="p-4">
@@ -143,10 +142,8 @@ export default function StudentImportPage() {
                     </Card>
                 )}
 
-                {/* 결과 표시 */}
                 {result && (
                     <div className="space-y-4">
-                        {/* 성공 */}
                         {result.registered.count > 0 && (
                             <Card className="border-green-300 bg-green-50">
                                 <CardContent className="p-4">
@@ -167,7 +164,6 @@ export default function StudentImportPage() {
                             </Card>
                         )}
 
-                        {/* 이미 등록됨 */}
                         {result.alreadyRegistered.count > 0 && (
                             <Card className="border-blue-300 bg-blue-50">
                                 <CardContent className="p-4">
@@ -188,7 +184,6 @@ export default function StudentImportPage() {
                             </Card>
                         )}
 
-                        {/* 미가입 (실패) */}
                         {result.notFound.count > 0 && (
                             <Card className="border-yellow-300 bg-yellow-50">
                                 <CardContent className="p-4">
@@ -215,5 +210,13 @@ export default function StudentImportPage() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function StudentImportPage() {
+    return (
+        <Suspense>
+            <StudentImportContent />
+        </Suspense>
     );
 }
