@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  schemas  = ["teacher_admin", "hub"]
 }
 
 /// 아레나 클래스 (반/그룹)
@@ -27,6 +28,7 @@ model Arena {
   @@index([ownerId], name: "idx_sa_arena_owner")
   @@index([inviteCode], name: "idx_sa_arena_invite")
   @@map("sa_arena")
+  @@schema("teacher_admin")
 }
 
 /// 아레나 멤버십 (학생-클래스 연결)
@@ -51,6 +53,7 @@ model ArenaMember {
   @@index([hubMemberId], name: "idx_sa_member_hub")
   @@index([authMemberId], name: "idx_sa_member_auth")
   @@map("sa_arena_member")
+  @@schema("teacher_admin")
 }
 
 /// 통합 인증 멤버 (Hub SSO 연동)
@@ -64,6 +67,7 @@ model AuthMember {
   arenaMembers ArenaMember[]
 
   @@map("sa_auth_member")
+  @@schema("teacher_admin")
 }
 
 /// 일간 학습 성과 스냅샷
@@ -89,6 +93,7 @@ model DailySnapshot {
   @@index([arenaId, date], name: "idx_sa_snapshot_arena_date")
   @@index([memberId], name: "idx_sa_snapshot_member")
   @@map("sa_daily_snapshot")
+  @@schema("teacher_admin")
 }
 
 /// Hub 공유 인증 테이블 (읽기 전용)
@@ -107,6 +112,7 @@ model auth_member {
   auth_member_s         auth_member_s?
 
   @@index([email, phone], map: "idx_auth_member_email_phone")
+  @@schema("hub")
 }
 
 /// Hub 학생 상세 정보 (읽기 전용)
@@ -119,4 +125,6 @@ model auth_member_s {
   school_level    String?     @db.VarChar(10)
   grade           Int?
   auth_member     auth_member @relation(fields: [member_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("hub")
 }
