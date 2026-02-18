@@ -46,7 +46,7 @@ function LoginForm() {
         throw new Error("사용자 정보를 불러올 수 없습니다.");
       }
 
-      if (user.role !== "TEACHER" && user.role !== "ADMIN") {
+      if ((user as any).role !== "TEACHER" && (user as any).role !== "ADMIN") {
         setError("선생님 계정만 로그인할 수 있습니다.");
         await authApi.logout();
         setIsLoading(false);
