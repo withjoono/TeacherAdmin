@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -19,11 +19,13 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>;
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const { setTokens, setUser } = useAuthStore();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const searchParams = useSearchParams();
 
   const {
     register,
@@ -32,6 +34,38 @@ export default function LoginPage() {
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
   });
+
+  // SSO 토큰 처리 (Hub에서 리다이렉트된 경우)
+  useEffect(() => {
+    const accessToken = searchParams.get("accessToken");
+    const refreshToken = searchParams.get("refreshToken");
+
+    if (accessToken && refreshToken) {
+      handleSsoLogin(accessToken, refreshToken);
+    }
+  }, [searchParams]);
+
+  const handleSsoLogin = async (accessToken: string, refreshToken: string) => {
+    setIsLoading(true);
+    try {
+      setTokens(accessToken, refreshToken);
+      const user = await authApi.me(accessToken);
+
+      if (user.role !== "TEACHER" && user.role !== "ADMIN") {
+        setError("선생님 계정만 로그인할 수 있습니다.");
+        useAuthStore.getState().logout();
+        setIsLoading(false);
+        return;
+      }
+
+      setUser(user);
+      router.push("/");
+    } catch (err) {
+      console.error("SSO Login Error:", err);
+      setError("SSO 로그인에 실패했습니다.");
+      setIsLoading(false);
+    }
+  };
 
   const onSubmit = async (data: LoginForm) => {
     setError(null);
@@ -115,5 +149,13 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center">Loading...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }

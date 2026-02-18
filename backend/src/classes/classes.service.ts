@@ -10,6 +10,9 @@ export class ClassesService {
     /**
      * 새 클래스(아레나) 생성
      */
+    /**
+     * 새 클래스(아레나) 생성
+     */
     async createClass(teacherHubId: string, name: string, description?: string) {
         const arenaCode = `TA-${Date.now().toString(36).toUpperCase()}`;
         const inviteCode = this.generateInviteCode();
@@ -19,7 +22,7 @@ export class ClassesService {
                 arenaCode,
                 name,
                 description: description || null,
-                ownerId: BigInt(teacherHubId),
+                ownerId: teacherHubId,
                 inviteCode,
             },
         });
@@ -41,7 +44,7 @@ export class ClassesService {
      */
     async getMyClasses(teacherHubId: string) {
         const arenas = await this.prisma.arena.findMany({
-            where: { ownerId: BigInt(teacherHubId), isActive: true },
+            where: { ownerId: teacherHubId, isActive: true },
             include: {
                 _count: { select: { members: true } },
             },
@@ -108,8 +111,8 @@ export class ClassesService {
                 await this.prisma.arenaMember.create({
                     data: {
                         arenaId: BigInt(arenaId),
-                        studentId: BigInt(member.id.replace(/\D/g, '') || '0'),
-                        hubMemberId: BigInt(member.id.replace(/\D/g, '') || '0'),
+                        studentId: member.id,
+                        hubMemberId: member.id,
                         authMemberId: member.id,
                         role: 'member',
                     },

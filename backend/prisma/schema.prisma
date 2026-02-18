@@ -14,7 +14,7 @@ model Arena {
   arenaCode   String   @unique @map("arena_code") @db.VarChar(20)
   name        String   @db.VarChar(100)
   description String?  @db.Text
-  ownerId     BigInt   @map("owner_id")
+  ownerId     String   @map("owner_id") @db.VarChar(50)
   inviteCode  String   @unique @map("invite_code") @db.VarChar(10)
   maxMembers  Int      @default(50) @map("max_members")
   isActive    Boolean  @default(true) @map("is_active")
@@ -35,8 +35,8 @@ model Arena {
 model ArenaMember {
   id           BigInt   @id @default(autoincrement())
   arenaId      BigInt   @map("arena_id")
-  studentId    BigInt   @map("student_id")
-  hubMemberId  BigInt?  @map("hub_member_id")
+  studentId    String   @map("student_id") @db.VarChar(50)
+  hubMemberId  String?  @map("hub_member_id") @db.VarChar(50)
   authMemberId String?  @map("auth_member_id") @db.VarChar(50)
   role         String   @default("member") @db.VarChar(20)
   joinedAt     DateTime @default(now()) @map("joined_at")
@@ -75,7 +75,7 @@ model DailySnapshot {
   id                BigInt   @id @default(autoincrement())
   arenaId           BigInt   @map("arena_id")
   memberId          BigInt   @map("member_id")
-  studentId         BigInt   @map("student_id")
+  studentId         String   @map("student_id") @db.VarChar(50)
   date              DateTime @db.Date
   totalMissions     Int      @default(0) @map("total_missions")
   completedMissions Int      @default(0) @map("completed_missions")
