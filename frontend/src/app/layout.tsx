@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { SSOListener } from "@/components/SSOListener";
+import "@/styles/design-system/index.css";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -35,7 +36,7 @@ export default function RootLayout({
   );
 
   return (
-    <html lang="ko">
+    <html lang="ko" data-app="teacher-admin">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
