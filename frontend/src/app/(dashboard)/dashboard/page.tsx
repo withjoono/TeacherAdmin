@@ -13,12 +13,14 @@ import {
   GraduationCap,
   Calendar,
   Loader2,
+  Clock,
+  CheckCircle2,
 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { getDashboard, getMyClasses } from "@/lib/api/teacher";
-import type { DashboardStats, ClassInfo } from "@/lib/api/teacher";
+import { getDashboard } from "@/lib/api/teacher";
+import type { DashboardStats } from "@/lib/api/teacher";
 
 // ================================
 // 타입 정의
@@ -53,28 +55,52 @@ const dashboardSections: DashboardSection[] = [
     color: "bg-green-500",
   },
   {
+    id: "curriculum",
+    title: "수업 계획",
+    icon: BookOpen,
+    description: "수업 진도 계획 및 기록 관리",
+    href: "/curriculum-management",
+    color: "bg-orange-500",
+  },
+  {
+    id: "attendance",
+    title: "출석부",
+    icon: CheckCircle2,
+    description: "출결 관리 및 통계",
+    href: "/attendance",
+    color: "bg-teal-500",
+  },
+  {
+    id: "exam",
+    title: "시험 관리",
+    icon: FileText,
+    description: "시험 생성, 성적 입력, 결과 분석",
+    href: "/exam-management",
+    color: "bg-red-500",
+  },
+  {
+    id: "assignment",
+    title: "과제 관리",
+    icon: ClipboardList,
+    description: "과제 출제, 제출 현황, 채점",
+    href: "/assignment-management",
+    color: "bg-purple-500",
+  },
+  {
+    id: "comments",
+    title: "비공개 코멘트",
+    icon: MessageSquare,
+    description: "학생별 비공개 채팅 (학부모 공유)",
+    href: "/comments",
+    color: "bg-indigo-500",
+  },
+  {
     id: "parent",
     title: "학부모 관리",
     icon: Home,
     description: "학부모 소통 및 관리",
     href: "/parent-management",
-    color: "bg-purple-500",
-  },
-  {
-    id: "curriculum",
-    title: "수업 현황 관리",
-    icon: BookOpen,
-    description: "수업 진도 계획 및 과제 관리",
-    href: "/curriculum-management",
-    color: "bg-orange-500",
-  },
-  {
-    id: "exam",
-    title: "테스트",
-    icon: FileText,
-    description: "시험 관리, 문제 업로드, 채점",
-    href: "/exam-management",
-    color: "bg-red-500",
+    color: "bg-pink-500",
   },
 ];
 
@@ -120,7 +146,6 @@ export default function DashboardPage() {
         setStats(data);
       } catch (err: any) {
         console.error('Dashboard fetch error:', err);
-        // Fallback to default stats on error
         setStats({
           totalClasses: 0,
           totalStudents: 0,
@@ -175,7 +200,7 @@ export default function DashboardPage() {
             color="bg-green-500"
           />
           <StatsCard
-            title="대기 중 과제"
+            title="미채점 과제"
             value={stats?.pendingAssignments ?? 0}
             icon={ClipboardList}
             color="bg-orange-500"
@@ -194,11 +219,38 @@ export default function DashboardPage() {
           />
         </div>
 
+        {/* 오늘 수업 */}
+        {stats?.todayLessons && stats.todayLessons.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="w-5 h-5" />
+                오늘 수업
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {stats.todayLessons.map((lesson: any, idx: number) => (
+                  <div key={idx} className="flex items-center gap-4 p-3 rounded-lg bg-blue-50">
+                    <div className="p-2 rounded-lg bg-blue-100">
+                      <BookOpen className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{lesson.className || lesson.title || '수업'}</p>
+                      <p className="text-xs text-muted-foreground">{lesson.time || lesson.scheduledDate || ''}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* 메인: 관리 섹션 카드 */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {dashboardSections.map((section) => (
             <Link key={section.id} href={section.href}>
-              <Card className="cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1">
+              <Card className="cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1 h-full">
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-3">
                     <div

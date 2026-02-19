@@ -16,6 +16,9 @@ import {
   Bell,
   Menu,
   X,
+  ClipboardList,
+  MessageSquare,
+  NotebookPen,
 } from "lucide-react";
 import { WonCircle } from "@/components/icons";
 import { cn } from "@/lib/utils";
@@ -53,8 +56,11 @@ const navItems: NavItem[] = [
   },
   {
     title: "수업 현황",
-    href: "/curriculum-management",
     icon: BookOpen,
+    subItems: [
+      { title: "수업 계획", href: "/curriculum-management" },
+      { title: "수업 기록", href: "/lesson-records" },
+    ],
   },
   {
     title: "출석부",
@@ -70,12 +76,22 @@ const navItems: NavItem[] = [
       { title: "채점 관리", href: "/grading-management" },
     ],
   },
+  {
+    title: "과제 관리",
+    href: "/assignment-management",
+    icon: ClipboardList,
+  },
+  {
+    title: "비공개 코멘트",
+    href: "/comments",
+    icon: MessageSquare,
+  },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [testMenuOpen, setTestMenuOpen] = useState(false);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
 
   const isActive = (href: string) => pathname === href;
   const isSubMenuActive = (subItems?: { href: string }[]) =>
@@ -105,7 +121,7 @@ export function Sidebar() {
                 item.subItems ? (
                   <div key={item.title} className="relative">
                     <button
-                      onClick={() => setTestMenuOpen(!testMenuOpen)}
+                      onClick={() => setOpenMenu(openMenu === item.title ? null : item.title)}
                       className={cn(
                         "flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
                         isSubMenuActive(item.subItems)
@@ -117,13 +133,13 @@ export function Sidebar() {
                       {item.title}
                       <ChevronDown className="h-3 w-3" />
                     </button>
-                    {testMenuOpen && (
+                    {openMenu === item.title && (
                       <div className="absolute left-0 top-full mt-1 w-40 rounded-lg border border-gray-200 bg-white py-1 shadow-lg z-50">
                         {item.subItems.map((sub) => (
                           <Link
                             key={sub.href}
                             href={sub.href}
-                            onClick={() => setTestMenuOpen(false)}
+                            onClick={() => setOpenMenu(null)}
                             className={cn(
                               "block px-4 py-2 text-sm transition-colors",
                               isActive(sub.href)

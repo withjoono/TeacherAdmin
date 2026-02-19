@@ -5,7 +5,6 @@ import { Header } from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -15,391 +14,421 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import {
-  BookOpen,
-  Calendar,
-  Clock,
+  Plus,
   Pencil,
   Trash2,
+  BookOpen,
+  Calendar,
+  Loader2,
   ChevronDown,
-  ChevronRight,
-  Users,
-  FileText,
-  ListChecks,
-  ClipboardList,
-  CheckCircle2,
-  AlertCircle,
+  ChevronUp,
+  X,
 } from "lucide-react";
-
-import type { LessonRecord, UpdateLessonRecordDto } from "@/lib/api/curriculum";
+import { getMyArenaClasses } from "@/lib/api/classes";
+import type { ArenaClass } from "@/lib/api/classes";
 import {
-  getLessonRecords,
-  createLessonRecord,
-  updateLessonRecord,
-  deleteLessonRecord,
-} from "@/lib/api/curriculum";
-
-import { LessonRecordForm } from "./_components/lesson-plan-form";
-import { AttendanceTable } from "./_components/attendance-table";
-import { CommentSection } from "./_components/comment-section";
-
-// ================================
-// Mock 클래스 데이터
-// ================================
-const mockClasses = [
-  { id: "class-a", name: "A반", studentCount: 5, subject: "수학" },
-  { id: "class-b", name: "B반", studentCount: 3, subject: "영어" },
-  { id: "class-c", name: "C반", studentCount: 2, subject: "국어" },
-];
+  getLessonPlans,
+  createLessonPlan,
+  updateLessonPlan,
+  deleteLessonPlan,
+} from "@/lib/api/teacher";
+import type { LessonPlan } from "@/lib/api/teacher";
 
 // ================================
 // 메인 페이지
 // ================================
 export default function CurriculumManagementPage() {
-  const [selectedClass, setSelectedClass] = useState(mockClasses[0].id);
-  const [records, setRecords] = useState<LessonRecord[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
+  const [classes, setClasses] = useState<ArenaClass[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState<string>("");
+  const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [plansLoading, setPlansLoading] = useState(false);
 
-  // 펼침/접힘 관리
-  const [expandedRecords, setExpandedRecords] = useState<Set<number>>(new Set());
+  // 생성 폼
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newDesc, setNewDesc] = useState("");
+  const [newDate, setNewDate] = useState("");
+  const [creating, setCreating] = useState(false);
 
   // 수정 다이얼로그
-  const [editingRecord, setEditingRecord] = useState<LessonRecord | null>(null);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editForm, setEditForm] = useState({
-    date: "", time: "", content: "",
-    assignmentResult: "", nextAssignment: "", testResult: "",
-  });
+  const [editPlan, setEditPlan] = useState<LessonPlan | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editDate, setEditDate] = useState("");
+  const [editProgress, setEditProgress] = useState(0);
+  const [saving, setSaving] = useState(false);
 
-  const selectedClassInfo = mockClasses.find((c) => c.id === selectedClass);
+  // 삭제 확인
+  const [deletePlan, setDeletePlan] = useState<LessonPlan | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  // 데이터 로드
-  const loadRecords = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await getLessonRecords(selectedClass);
-      setRecords(data);
-      // 최신 기록 자동 펼침
-      if (data.length > 0) {
-        setExpandedRecords(new Set([data[0].id]));
+  // 클래스 목록 로드
+  useEffect(() => {
+    async function fetchClasses() {
+      try {
+        setLoading(true);
+        const data = await getMyArenaClasses();
+        setClasses(data || []);
+        if (data && data.length > 0) {
+          setSelectedClassId(String(data[0].id));
+        }
+      } catch (err) {
+        console.error("Failed to fetch classes:", err);
+        setClasses([]);
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
     }
-  }, [selectedClass]);
+    fetchClasses();
+  }, []);
+
+  // 선택된 클래스의 수업 계획 목록 로드
+  const fetchPlans = useCallback(async () => {
+    if (!selectedClassId) return;
+    try {
+      setPlansLoading(true);
+      const data = await getLessonPlans(selectedClassId);
+      setLessonPlans(data || []);
+    } catch (err) {
+      console.error("Failed to fetch lesson plans:", err);
+      setLessonPlans([]);
+    } finally {
+      setPlansLoading(false);
+    }
+  }, [selectedClassId]);
 
   useEffect(() => {
-    loadRecords();
-  }, [loadRecords]);
+    fetchPlans();
+  }, [fetchPlans]);
 
-  // 펼침 토글
-  const toggleExpand = (id: number) => {
-    setExpandedRecords(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  // 수업 기록 추가
-  const handleCreate = async (data: Parameters<typeof createLessonRecord>[0]) => {
-    setActionLoading(true);
+  // 생성
+  const handleCreate = async () => {
+    if (!newTitle.trim() || !selectedClassId) return;
     try {
-      await createLessonRecord(data);
-      await loadRecords();
+      setCreating(true);
+      await createLessonPlan(selectedClassId, {
+        title: newTitle.trim(),
+        description: newDesc.trim() || undefined,
+        scheduledDate: newDate || undefined,
+      });
+      setNewTitle("");
+      setNewDesc("");
+      setNewDate("");
+      setShowCreateForm(false);
+      fetchPlans();
+    } catch (err) {
+      console.error("Failed to create lesson plan:", err);
+      alert("수업 계획 생성에 실패했습니다.");
     } finally {
-      setActionLoading(false);
+      setCreating(false);
     }
   };
 
   // 수정 다이얼로그 열기
-  const openEditDialog = (record: LessonRecord) => {
-    setEditingRecord(record);
-    setEditForm({
-      date: record.date,
-      time: record.time,
-      content: record.content,
-      assignmentResult: record.assignmentResult || "",
-      nextAssignment: record.nextAssignment || "",
-      testResult: record.testResult || "",
-    });
-    setEditDialogOpen(true);
+  const openEdit = (plan: LessonPlan) => {
+    setEditPlan(plan);
+    setEditTitle(plan.title);
+    setEditDesc(plan.description || "");
+    setEditDate(plan.scheduledDate?.split("T")[0] || "");
+    setEditProgress(plan.progress || 0);
   };
 
   // 수정 저장
   const handleUpdate = async () => {
-    if (!editingRecord) return;
-    setActionLoading(true);
+    if (!editPlan || !selectedClassId) return;
     try {
-      await updateLessonRecord(editingRecord.id, selectedClass, {
-        date: editForm.date,
-        time: editForm.time,
-        content: editForm.content,
-        assignmentResult: editForm.assignmentResult || undefined,
-        nextAssignment: editForm.nextAssignment || undefined,
-        testResult: editForm.testResult || undefined,
+      setSaving(true);
+      await updateLessonPlan(selectedClassId, editPlan.id, {
+        title: editTitle.trim() || undefined,
+        description: editDesc.trim() || undefined,
+        scheduledDate: editDate || undefined,
+        progress: editProgress,
       });
-      await loadRecords();
-      setEditDialogOpen(false);
+      setEditPlan(null);
+      fetchPlans();
+    } catch (err) {
+      console.error("Failed to update lesson plan:", err);
+      alert("수업 계획 수정에 실패했습니다.");
     } finally {
-      setActionLoading(false);
+      setSaving(false);
     }
   };
 
   // 삭제
-  const handleDelete = async (id: number) => {
-    if (!confirm("이 수업 기록을 삭제하시겠습니까?")) return;
-    setActionLoading(true);
+  const handleDelete = async () => {
+    if (!deletePlan || !selectedClassId) return;
     try {
-      await deleteLessonRecord(id, selectedClass);
-      await loadRecords();
+      setDeleting(true);
+      await deleteLessonPlan(selectedClassId, deletePlan.id);
+      setDeletePlan(null);
+      fetchPlans();
+    } catch (err) {
+      console.error("Failed to delete lesson plan:", err);
+      alert("수업 계획 삭제에 실패했습니다.");
     } finally {
-      setActionLoading(false);
+      setDeleting(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex flex-col">
+        <Header title="수업 계획" />
+        <div className="flex-1 flex items-center justify-center p-6">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col">
-      <Header title="수업 현황 관리" />
+      <Header title="수업 계획" />
 
-      <div className="flex-1 p-6 space-y-5">
-        {/* ========== 반 선택 ========== */}
+      <div className="flex-1 p-6 space-y-6">
+        {/* 반 선택 */}
         <Card>
           <CardContent className="p-4">
             <div className="flex gap-2 flex-wrap items-center">
-              <span className="text-sm font-medium text-muted-foreground mr-2">반 선택</span>
-              {mockClasses.map((cls) => (
+              <span className="text-sm font-medium text-muted-foreground mr-2">
+                클래스 선택
+              </span>
+              {classes.map((cls) => (
                 <button
                   key={cls.id}
-                  onClick={() => setSelectedClass(cls.id)}
-                  className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${cls.id === selectedClass
-                    ? "bg-primary text-primary-foreground shadow-md"
-                    : "bg-muted hover:bg-muted/80"
+                  onClick={() => setSelectedClassId(String(cls.id))}
+                  className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${String(cls.id) === selectedClassId
+                      ? "bg-primary text-primary-foreground shadow-md"
+                      : "bg-muted hover:bg-muted/80"
                     }`}
                 >
                   {cls.name}
-                  <span className="ml-1.5 text-xs opacity-80">
-                    ({cls.studentCount}명 · {cls.subject})
-                  </span>
                 </button>
               ))}
+              {classes.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  클래스가 없습니다. 클래스 관리에서 먼저 생성하세요.
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* ========== 수업 기록 헤더 ========== */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-bold flex items-center gap-2">
-              <BookOpen className="w-5 h-5" />
-              {selectedClassInfo?.name} 수업계획 / 현황
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              수업 내용을 기록하고 학생들의 출석과 과제를 관리하세요
-            </p>
-          </div>
-          <LessonRecordForm
-            classId={selectedClass}
-            onSubmit={handleCreate}
-            isLoading={actionLoading}
-          />
-        </div>
-
-        {/* ========== 수업 기록 목록 ========== */}
-        {loading ? (
-          <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              로딩 중...
-            </CardContent>
-          </Card>
-        ) : records.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <BookOpen className="w-14 h-14 mb-4 opacity-30" />
-              <p className="text-lg font-medium">아직 수업 기록이 없습니다</p>
-              <p className="text-sm mt-1">&quot;수업 기록 추가&quot; 버튼으로 첫 수업을 기록하세요</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-4">
-            {records.map((record) => {
-              const isExpanded = expandedRecords.has(record.id);
-
-              return (
-                <Card key={record.id} className="overflow-hidden">
-                  {/* 접힌 상태: 요약 헤더 */}
-                  <div
-                    className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-accent/30 transition-colors"
-                    onClick={() => toggleExpand(record.id)}
+        {/* 수업 계획 목록 */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="w-5 h-5" />
+                수업 계획
+              </CardTitle>
+              <Button size="sm" onClick={() => setShowCreateForm(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                새 계획 추가
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {/* 생성 폼 (인라인) */}
+            {showCreateForm && (
+              <div className="mb-6 p-4 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold">새 수업 계획</h4>
+                  <button onClick={() => setShowCreateForm(false)}>
+                    <X className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                </div>
+                <Input
+                  placeholder="제목 *"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                />
+                <textarea
+                  placeholder="설명 (선택사항)"
+                  value={newDesc}
+                  onChange={(e) => setNewDesc(e.target.value)}
+                  rows={2}
+                  className="w-full px-3 py-2 rounded-md border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-muted-foreground" />
+                    <Input
+                      type="date"
+                      value={newDate}
+                      onChange={(e) => setNewDate(e.target.value)}
+                      className="w-auto"
+                    />
+                  </div>
+                  <div className="flex-1" />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowCreateForm(false)}
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        {isExpanded ? (
-                          <ChevronDown className="w-5 h-5" />
-                        ) : (
-                          <ChevronRight className="w-5 h-5" />
+                    취소
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleCreate}
+                    disabled={creating || !newTitle.trim()}
+                  >
+                    {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : "생성"}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* 계획 리스트 */}
+            {plansLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : lessonPlans.length > 0 ? (
+              <div className="space-y-3">
+                {lessonPlans.map((plan) => (
+                  <div
+                    key={plan.id}
+                    className="p-4 rounded-lg border hover:bg-accent/30 transition-colors"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <h4 className="font-semibold">{plan.title}</h4>
+                        {plan.description && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {plan.description}
+                          </p>
+                        )}
+                        {plan.scheduledDate && (
+                          <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            {plan.scheduledDate.split("T")[0]}
+                          </p>
                         )}
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1.5 text-sm">
-                          <Calendar className="w-4 h-4 text-blue-500" />
-                          <span className="font-semibold">{record.date}</span>
-                          <span className="text-muted-foreground">({record.dayOfWeek})</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                          <Clock className="w-4 h-4" />
-                          <span>{record.time}</span>
-                        </div>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => openEdit(plan)}
+                          className="p-1.5 rounded-md hover:bg-accent transition-colors"
+                          title="수정"
+                        >
+                          <Pencil className="w-4 h-4 text-muted-foreground" />
+                        </button>
+                        <button
+                          onClick={() => setDeletePlan(plan)}
+                          className="p-1.5 rounded-md hover:bg-red-50 transition-colors"
+                          title="삭제"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-400" />
+                        </button>
                       </div>
-                      <span className="text-sm text-muted-foreground hidden md:inline">
-                        — {record.content.split('\n')[0].substring(0, 40)}
-                        {record.content.length > 40 ? '...' : ''}
-                      </span>
                     </div>
-                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                      <Button
-                        variant="outline" size="sm"
-                        onClick={() => openEditDialog(record)}
-                      >
-                        <Pencil className="w-3.5 h-3.5 mr-1" />
-                        수정
-                      </Button>
-                      <Button
-                        variant="outline" size="sm"
-                        onClick={() => handleDelete(record.id)}
-                        className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+
+                    {/* 진도바 */}
+                    <div className="mt-3">
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="text-muted-foreground">진도율</span>
+                        <span className="font-semibold">{plan.progress || 0}%</span>
+                      </div>
+                      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-blue-400 to-blue-600 rounded-full transition-all"
+                          style={{ width: `${plan.progress || 0}%` }}
+                        />
+                      </div>
                     </div>
                   </div>
-
-                  {/* 펼친 상태: 상세 */}
-                  {isExpanded && (
-                    <div className="border-t">
-                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 lg:divide-x">
-                        {/* 왼쪽: 수업 정보 */}
-                        <div className="lg:col-span-2 p-5 space-y-5">
-                          {/* 수업내용 */}
-                          <div>
-                            <h4 className="text-sm font-semibold flex items-center gap-1.5 mb-2 text-blue-700">
-                              <FileText className="w-4 h-4" />
-                              수업내용
-                            </h4>
-                            <div className="bg-blue-50/50 rounded-lg p-3 text-sm whitespace-pre-line leading-relaxed">
-                              {record.content}
-                            </div>
-                          </div>
-
-                          {/* 과제 결과 + 다음 과제 + 테스트 결과 */}
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <div>
-                              <h4 className="text-sm font-semibold flex items-center gap-1.5 mb-2 text-green-700">
-                                <CheckCircle2 className="w-4 h-4" />
-                                과제 결과
-                              </h4>
-                              <div className="bg-green-50/50 rounded-lg p-3 text-sm min-h-[60px]">
-                                {record.assignmentResult || (
-                                  <span className="text-muted-foreground italic">기록 없음</span>
-                                )}
-                              </div>
-                            </div>
-                            <div>
-                              <h4 className="text-sm font-semibold flex items-center gap-1.5 mb-2 text-orange-700">
-                                <ClipboardList className="w-4 h-4" />
-                                다음 과제
-                              </h4>
-                              <div className="bg-orange-50/50 rounded-lg p-3 text-sm min-h-[60px]">
-                                {record.nextAssignment || (
-                                  <span className="text-muted-foreground italic">기록 없음</span>
-                                )}
-                              </div>
-                            </div>
-                            <div>
-                              <h4 className="text-sm font-semibold flex items-center gap-1.5 mb-2 text-purple-700">
-                                <ListChecks className="w-4 h-4" />
-                                테스트 결과
-                              </h4>
-                              <div className="bg-purple-50/50 rounded-lg p-3 text-sm min-h-[60px]">
-                                {record.testResult || (
-                                  <span className="text-muted-foreground italic">기록 없음</span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* 출석/지각 현황 */}
-                          <div>
-                            <h4 className="text-sm font-semibold flex items-center gap-1.5 mb-2 text-teal-700">
-                              <Users className="w-4 h-4" />
-                              출석/지각 현황
-                            </h4>
-                            <div className="border rounded-lg p-3">
-                              <AttendanceTable lessonRecordId={record.id} classId={selectedClass} />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* 오른쪽: 코멘트 */}
-                        <div className="p-5 bg-muted/20">
-                          <CommentSection lessonRecordId={record.id} />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </Card>
-              );
-            })}
-          </div>
-        )}
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-sm text-muted-foreground py-8">
+                등록된 수업 계획이 없습니다. "새 계획 추가" 버튼으로 시작하세요.
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      {/* ========== 수정 다이얼로그 ========== */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+      {/* 수정 다이얼로그 */}
+      <Dialog open={!!editPlan} onOpenChange={(o) => !o && setEditPlan(null)}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>수업 기록 수정</DialogTitle>
+            <DialogTitle>수업 계획 수정</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>날짜</Label>
-                <Input type="date" value={editForm.date} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} />
-              </div>
-              <div className="space-y-2">
-                <Label>시간</Label>
-                <Input value={editForm.time} onChange={(e) => setEditForm({ ...editForm, time: e.target.value })} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>수업내용</Label>
-              <textarea
-                rows={4}
-                className="w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                value={editForm.content}
-                onChange={(e) => setEditForm({ ...editForm, content: e.target.value })}
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="block text-sm font-medium mb-1">제목</label>
+              <Input
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
               />
             </div>
-            <div className="space-y-2">
-              <Label>과제 결과</Label>
-              <Input value={editForm.assignmentResult} onChange={(e) => setEditForm({ ...editForm, assignmentResult: e.target.value })} />
+            <div>
+              <label className="block text-sm font-medium mb-1">설명</label>
+              <textarea
+                value={editDesc}
+                onChange={(e) => setEditDesc(e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 rounded-md border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
+              />
             </div>
-            <div className="space-y-2">
-              <Label>다음 과제</Label>
-              <Input value={editForm.nextAssignment} onChange={(e) => setEditForm({ ...editForm, nextAssignment: e.target.value })} />
+            <div>
+              <label className="block text-sm font-medium mb-1">예정일</label>
+              <Input
+                type="date"
+                value={editDate}
+                onChange={(e) => setEditDate(e.target.value)}
+              />
             </div>
-            <div className="space-y-2">
-              <Label>테스트 결과</Label>
-              <Input value={editForm.testResult} onChange={(e) => setEditForm({ ...editForm, testResult: e.target.value })} />
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                진도율: {editProgress}%
+              </label>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={editProgress}
+                onChange={(e) => setEditProgress(Number(e.target.value))}
+                className="w-full accent-primary"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>0%</span>
+                <span>50%</span>
+                <span>100%</span>
+              </div>
             </div>
           </div>
           <DialogFooter>
             <DialogClose asChild>
               <Button variant="outline">취소</Button>
             </DialogClose>
-            <Button onClick={handleUpdate} disabled={actionLoading}>
-              {actionLoading ? "저장 중..." : "저장"}
+            <Button onClick={handleUpdate} disabled={saving}>
+              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              저장
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 삭제 확인 다이얼로그 */}
+      <Dialog open={!!deletePlan} onOpenChange={(o) => !o && setDeletePlan(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>수업 계획 삭제</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground py-2">
+            &ldquo;{deletePlan?.title}&rdquo;을(를) 정말 삭제하시겠습니까?
+            <br />이 작업은 되돌릴 수 없습니다.
+          </p>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">취소</Button>
+            </DialogClose>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              삭제
             </Button>
           </DialogFooter>
         </DialogContent>

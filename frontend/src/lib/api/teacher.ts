@@ -96,10 +96,21 @@ export interface Assignment {
     status?: string;
 }
 
+export interface AssignmentSubmission {
+    id: string;
+    studentId: string;
+    studentName?: string;
+    submittedAt?: string;
+    score?: number;
+    feedback?: string;
+    fileUrl?: string;
+}
+
 export interface PrivateComment {
     id: string;
     authorId: string;
     authorName: string;
+    authorRole?: string;
     targetId: string;
     studentId?: string;
     content: string;
@@ -111,19 +122,8 @@ export interface PrivateComment {
 
 export async function getDashboard(): Promise<DashboardStats> {
     try {
-        // Arena 클래스 API에서 실제 데이터 가져오기
-        const response = await authClient.get('/api/classes');
-        const classes = response.data || [];
-        const totalStudents = classes.reduce((sum: number, c: any) => sum + (c.memberCount || 0), 0);
-        return {
-            totalClasses: classes.length,
-            totalStudents,
-            pendingAssignments: 0,
-            upcomingExams: 0,
-            unreadMessages: 0,
-            todayLessons: [],
-            recentActivities: [],
-        };
+        const response = await authClient.get('/tutor/dashboard');
+        return response.data;
     } catch {
         // 미인증 상태 등에선 기본값 반환
         return {
@@ -234,14 +234,15 @@ export async function createTest(
 }
 
 export async function bulkInputTestResults(
+    classId: string,
     testId: string,
-    results: Array<{ studentId: string; score: number; feedback?: string }>
+    data: { results: Array<{ studentId: string; score: number; feedback?: string }> }
 ): Promise<void> {
-    await authClient.post(`/teacher/tests/${testId}/results`, { results });
+    await authClient.post(`/teacher/classes/${classId}/tests/${testId}/results`, data);
 }
 
-export async function getTestResults(testId: string): Promise<TestResult[]> {
-    const response = await authClient.get(`/teacher/tests/${testId}/results`);
+export async function getTestResults(classId: string, testId: string): Promise<TestResult[]> {
+    const response = await authClient.get(`/teacher/classes/${classId}/tests/${testId}/results`);
     return response.data;
 }
 
@@ -250,7 +251,7 @@ export async function getTestResults(testId: string): Promise<TestResult[]> {
 export async function createAssignment(
     classId: string,
     data: {
-        lessonId: string;
+        lessonId?: string;
         title: string;
         description?: string;
         dueDate?: string;
@@ -261,26 +262,27 @@ export async function createAssignment(
     return response.data;
 }
 
-export async function getAssignmentSubmissions(assignmentId: string) {
-    const response = await authClient.get(`/teacher/assignments/${assignmentId}/submissions`);
+export async function getAssignmentSubmissions(
+    classId: string,
+    assignmentId: string
+): Promise<AssignmentSubmission[]> {
+    const response = await authClient.get(`/teacher/classes/${classId}/assignments/${assignmentId}/submissions`);
     return response.data;
 }
 
 export async function gradeSubmission(
+    classId: string,
+    assignmentId: string,
     submissionId: string,
-    data: { grade?: number; feedback?: string }
-) {
-    const response = await authClient.patch(`/teacher/submissions/${submissionId}/grade`, data);
-    return response.data;
+    data: { score?: number; feedback?: string }
+): Promise<void> {
+    await authClient.patch(`/teacher/classes/${classId}/assignments/${assignmentId}/submissions/${submissionId}/grade`, data);
 }
 
 // ===== Private Comments =====
 
 export async function createPrivateComment(data: {
-    targetId: string;
-    studentId?: string;
-    contextType?: string;
-    contextId?: string;
+    studentId: string;
     content: string;
     imageUrl?: string;
 }): Promise<PrivateComment> {
