@@ -90,10 +90,10 @@ export function Sidebar() {
             {/* Left: Logo */}
             <div className="flex items-center gap-3">
               <Link href="/dashboard" className="flex items-center gap-2" style={{ textDecoration: 'none' }}>
-                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-600">
+                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary">
                   <span className="text-xs font-bold text-white">T</span>
                 </div>
-                <span className="text-[15px] font-bold tracking-tight text-indigo-600">
+                <span className="text-[15px] font-bold tracking-tight text-primary">
                   Teacher Admin
                 </span>
               </Link>
@@ -109,7 +109,7 @@ export function Sidebar() {
                       className={cn(
                         "flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
                         isSubMenuActive(item.subItems)
-                          ? "text-indigo-600 bg-indigo-50"
+                          ? "text-primary bg-primary/10"
                           : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                       )}
                     >
@@ -127,7 +127,7 @@ export function Sidebar() {
                             className={cn(
                               "block px-4 py-2 text-sm transition-colors",
                               isActive(sub.href)
-                                ? "text-indigo-600 bg-indigo-50 font-medium"
+                                ? "text-primary bg-primary/10 font-medium"
                                 : "text-gray-600 hover:bg-gray-100"
                             )}
                           >
@@ -144,7 +144,7 @@ export function Sidebar() {
                     className={cn(
                       "flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
                       isActive(item.href!)
-                        ? "text-indigo-600 bg-indigo-50"
+                        ? "text-primary bg-primary/10"
                         : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                     )}
                   >
