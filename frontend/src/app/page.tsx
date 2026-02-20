@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/auth";
+import { redirectToHubLogin } from "@/lib/sso";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, CheckCircle2, ShieldCheck, BarChart3, Loader2 } from "lucide-react";
 
@@ -38,9 +38,7 @@ export default function LandingPage() {
                         <span>Teacher Admin</span>
                     </div>
                     <div className="flex items-center gap-4">
-                        <Link href="/auth/login">
-                            <Button>로그인</Button>
-                        </Link>
+                        <Button onClick={redirectToHubLogin}>로그인</Button>
                     </div>
                 </div>
             </header>
@@ -56,11 +54,9 @@ export default function LandingPage() {
                         더 효율적인 학급 운영을 시작해보세요.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4 w-full items-center">
-                        <Link href="/auth/login">
-                            <Button size="lg" className="gap-2">
-                                시작하기 <ArrowRight className="h-4 w-4" />
-                            </Button>
-                        </Link>
+                        <Button size="lg" className="gap-2" onClick={redirectToHubLogin}>
+                            시작하기 <ArrowRight className="h-4 w-4" />
+                        </Button>
                         <Button size="lg" variant="outline">
                             기능 더 알아보기
                         </Button>

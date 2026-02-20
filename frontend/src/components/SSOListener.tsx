@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { processSSOLogin } from '@/lib/sso';
+import { useAuthStore } from '@/lib/auth';
 
 export function SSOListener() {
     const [isSSOLoading, setIsSSOLoading] = useState(() => {
@@ -11,9 +12,11 @@ export function SSOListener() {
     });
 
     useEffect(() => {
-        processSSOLogin().then((loggedIn) => {
-            if (loggedIn) {
+        processSSOLogin().then((tokens) => {
+            if (tokens) {
                 console.log('[SSO] 로그인 성공');
+                // useAuthStore에 토큰 동기화
+                useAuthStore.getState().setTokens(tokens.accessToken, tokens.refreshToken);
                 window.location.reload();
             }
             setIsSSOLoading(false);
@@ -48,3 +51,4 @@ export function SSOListener() {
         </div>
     );
 }
+

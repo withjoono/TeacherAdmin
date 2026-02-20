@@ -11,12 +11,13 @@ export function redirectToHubLogin() {
 
 /**
  * SSO 코드를 Hub Backend에 직접 전송하여 토큰 교환
+ * 성공 시 토큰 객체를 반환, 실패 시 null 반환
  */
-export async function processSSOLogin(): Promise<boolean> {
+export async function processSSOLogin(): Promise<{ accessToken: string; refreshToken: string } | null> {
     const params = new URLSearchParams(window.location.search);
     const ssoCode = params.get('sso_code');
 
-    if (!ssoCode) return false;
+    if (!ssoCode) return null;
 
     try {
         const response = await fetch(`${HUB_API_URL}/auth/sso/verify-code`, {
@@ -25,7 +26,7 @@ export async function processSSOLogin(): Promise<boolean> {
             body: JSON.stringify({ code: ssoCode, serviceId: SERVICE_ID }),
         });
 
-        if (!response.ok) return false;
+        if (!response.ok) return null;
 
         const result = await response.json();
         const data = result.data || result;
@@ -40,11 +41,11 @@ export async function processSSOLogin(): Promise<boolean> {
             const url = new URL(window.location.href);
             url.searchParams.delete('sso_code');
             window.history.replaceState({}, '', url.toString());
-            return true;
+            return { accessToken: data.accessToken, refreshToken: data.refreshToken || '' };
         }
     } catch (e) {
         console.warn('[SSO] Exchange failed:', e);
     }
 
-    return false;
+    return null;
 }
