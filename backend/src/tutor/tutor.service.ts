@@ -426,6 +426,202 @@ export class TutorService {
         });
     }
 
+    // ===== STUDENT DATA VIEWING (선생님이 학생 앱 데이터 열람) =====
+
+    /**
+     * 선생님이 해당 학생에게 접근 가능한지 검증
+     * (선생님의 클래스에 등록된 학생인지 확인)
+     */
+    private async verifyStudentAccess(teacherId: string, studentId: string) {
+        const enrollment = await this.prisma.tbClassEnrollment.findFirst({
+            where: {
+                studentId,
+                class: { teacherId },
+            },
+            include: {
+                student: {
+                    select: { id: true, username: true, email: true, phone: true, avatarUrl: true },
+                },
+                class: {
+                    select: { id: true, name: true, subject: true },
+                },
+            },
+        });
+
+        if (!enrollment) {
+            throw new ForbiddenException('이 학생에 대한 접근 권한이 없습니다.');
+        }
+
+        return enrollment;
+    }
+
+    /**
+     * 학생 학습 요약 (Overview)
+     * - 기본 정보, 소속 클래스, 과제/시험/출석 요약 통계
+     */
+    async getStudentOverview(hubId: string, studentId: string) {
+        const user = await this.resolveTeacher(hubId);
+        await this.verifyStudentAccess(user.id, studentId);
+
+        const student = await this.prisma.tbUser.findUnique({
+            where: { id: studentId },
+            select: { id: true, username: true, email: true, phone: true, avatarUrl: true },
+        });
+
+        if (!student) throw new NotFoundException('학생을 찾을 수 없습니다.');
+
+        // 이 선생님의 클래스에서 해당 학생의 등록 정보
+        const enrollments = await this.prisma.tbClassEnrollment.findMany({
+            where: {
+                studentId,
+                class: { teacherId: user.id },
+            },
+            include: {
+                class: { select: { id: true, name: true, subject: true } },
+            },
+        });
+
+        const classIds = enrollments.map((e) => e.classId);
+
+        // 과제 제출 통계
+        const [totalAssignments, submittedAssignments] = await Promise.all([
+            this.prisma.tbAssignment.count({
+                where: { lesson: { classId: { in: classIds } } },
+            }),
+            this.prisma.tbAssignmentSubmission.count({
+                where: { studentId, assignment: { lesson: { classId: { in: classIds } } } },
+            }),
+        ]);
+
+        // 시험 통계
+        const testResults = await this.prisma.tbTestResult.findMany({
+            where: { studentId, test: { lesson: { classId: { in: classIds } } } },
+            include: { test: { select: { maxScore: true, title: true } } },
+            orderBy: { takenAt: 'desc' },
+            take: 5,
+        });
+
+        const avgScore = testResults.length > 0
+            ? Math.round(testResults.reduce((sum, r) => sum + (r.score / r.test.maxScore) * 100, 0) / testResults.length)
+            : null;
+
+        // 출석 통계 (최근 30일)
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const attendances = await this.prisma.tbAttendance.findMany({
+            where: {
+                studentId,
+                classId: { in: classIds },
+                date: { gte: thirtyDaysAgo },
+            },
+        });
+
+        const attendanceStats = {
+            total: attendances.length,
+            present: attendances.filter((a) => a.status === 'present').length,
+            late: attendances.filter((a) => a.status === 'late').length,
+            absent: attendances.filter((a) => a.status === 'absent').length,
+        };
+
+        // 최근 코멘트 수
+        const commentCount = await this.prisma.tbPrivateComment.count({
+            where: { studentId },
+        });
+
+        return {
+            student,
+            classes: enrollments.map((e) => e.class),
+            stats: {
+                assignments: { total: totalAssignments, submitted: submittedAssignments },
+                tests: { count: testResults.length, avgScore, recentResults: testResults },
+                attendance: attendanceStats,
+                commentCount,
+            },
+        };
+    }
+
+    /**
+     * 학생의 과제 목록 및 제출 현황
+     */
+    async getStudentAssignments(hubId: string, studentId: string) {
+        const user = await this.resolveTeacher(hubId);
+        await this.verifyStudentAccess(user.id, studentId);
+
+        const classIds = (await this.prisma.tbClassEnrollment.findMany({
+            where: { studentId, class: { teacherId: user.id } },
+            select: { classId: true },
+        })).map((e) => e.classId);
+
+        return this.prisma.tbAssignment.findMany({
+            where: { lesson: { classId: { in: classIds } } },
+            include: {
+                lesson: {
+                    select: { title: true, class: { select: { name: true, subject: true } } },
+                },
+                submissions: {
+                    where: { studentId },
+                    select: {
+                        id: true, status: true, grade: true,
+                        feedback: true, submittedAt: true, submissionFileUrl: true,
+                    },
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+
+    /**
+     * 학생의 시험 결과
+     */
+    async getStudentTests(hubId: string, studentId: string) {
+        const user = await this.resolveTeacher(hubId);
+        await this.verifyStudentAccess(user.id, studentId);
+
+        const classIds = (await this.prisma.tbClassEnrollment.findMany({
+            where: { studentId, class: { teacherId: user.id } },
+            select: { classId: true },
+        })).map((e) => e.classId);
+
+        return this.prisma.tbTest.findMany({
+            where: { lesson: { classId: { in: classIds } } },
+            include: {
+                lesson: {
+                    select: { title: true, class: { select: { name: true, subject: true } } },
+                },
+                results: {
+                    where: { studentId },
+                    select: {
+                        id: true, score: true, feedback: true,
+                        wrongAnswerNote: true, takenAt: true,
+                    },
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+
+    /**
+     * 학생의 출석 기록
+     */
+    async getStudentAttendance(hubId: string, studentId: string) {
+        const user = await this.resolveTeacher(hubId);
+        await this.verifyStudentAccess(user.id, studentId);
+
+        const classIds = (await this.prisma.tbClassEnrollment.findMany({
+            where: { studentId, class: { teacherId: user.id } },
+            select: { classId: true },
+        })).map((e) => e.classId);
+
+        return this.prisma.tbAttendance.findMany({
+            where: { studentId, classId: { in: classIds } },
+            include: {
+                class: { select: { name: true, subject: true } },
+            },
+            orderBy: { date: 'desc' },
+        });
+    }
+
     // ===== PRIVATE COMMENTS =====
 
     async createPrivateComment(hubId: string, data: {

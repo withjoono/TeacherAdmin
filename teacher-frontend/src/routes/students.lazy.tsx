@@ -1,4 +1,4 @@
-import { createLazyFileRoute } from '@tanstack/react-router';
+import { createLazyFileRoute, useNavigate, Outlet, useMatch } from '@tanstack/react-router';
 import { useState } from 'react';
 import { Users, Plus, Search, Trash2, BookOpen, Camera, BarChart } from 'lucide-react';
 import { useStudents } from '../hooks/useStudents';
@@ -8,9 +8,18 @@ export const Route = createLazyFileRoute('/students')({
 });
 
 function StudentsPage() {
+  // 자식 라우트 (학생 상세 페이지)가 활성화되어 있으면 Outlet만 렌더링
+  const childMatch = useMatch({ from: '/students/$studentId', shouldThrow: false });
+  if (childMatch) return <Outlet />;
+
+  return <StudentsListView />;
+}
+
+function StudentsListView() {
   const { data: students, isLoading } = useStudents();
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const navigate = useNavigate();
 
   if (isLoading) {
     return (
@@ -72,7 +81,8 @@ function StudentsPage() {
             return (
               <div
                 key={student.id}
-                className="rounded-xl border border-white/5 bg-slate-900/50 p-5 backdrop-blur-sm transition-all hover:border-white/10 hover:bg-slate-800/50"
+                className="cursor-pointer rounded-xl border border-white/5 bg-slate-900/50 p-5 backdrop-blur-sm transition-all hover:border-emerald-500/20 hover:bg-slate-800/50"
+                onClick={() => navigate({ to: '/students/$studentId', params: { studentId: String(student.id) } })}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
@@ -114,13 +124,22 @@ function StudentsPage() {
                 </div>
 
                 <div className="mt-4 flex gap-2">
-                  <button className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-white/5 bg-slate-800/50 py-2 text-xs font-medium text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); navigate({ to: '/students/$studentId', params: { studentId: String(student.id) } }); }}
+                    className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-white/5 bg-slate-800/50 py-2 text-xs font-medium text-slate-400 transition-colors hover:bg-emerald-500/10 hover:text-emerald-400"
+                  >
                     <BookOpen className="h-3 w-3" /> 미션
                   </button>
-                  <button className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-white/5 bg-slate-800/50 py-2 text-xs font-medium text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); navigate({ to: '/students/$studentId', params: { studentId: String(student.id) } }); }}
+                    className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-white/5 bg-slate-800/50 py-2 text-xs font-medium text-slate-400 transition-colors hover:bg-emerald-500/10 hover:text-emerald-400"
+                  >
                     <Camera className="h-3 w-3" /> 사진
                   </button>
-                  <button className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-white/5 bg-slate-800/50 py-2 text-xs font-medium text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); navigate({ to: '/students/$studentId', params: { studentId: String(student.id) } }); }}
+                    className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-white/5 bg-slate-800/50 py-2 text-xs font-medium text-slate-400 transition-colors hover:bg-emerald-500/10 hover:text-emerald-400"
+                  >
                     <BarChart className="h-3 w-3" /> 성적
                   </button>
                 </div>

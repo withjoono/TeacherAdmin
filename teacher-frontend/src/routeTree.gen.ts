@@ -16,6 +16,9 @@ import { Route as IndexRouteImport } from './routes/index'
 const StudentsLazyRouteImport = createFileRoute('/students')()
 const SettingsLazyRouteImport = createFileRoute('/settings')()
 const MessagesLazyRouteImport = createFileRoute('/messages')()
+const StudentsStudentIdLazyRouteImport = createFileRoute(
+  '/students/$studentId',
+)()
 
 const StudentsLazyRoute = StudentsLazyRouteImport.update({
   id: '/students',
@@ -37,39 +40,60 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StudentsStudentIdLazyRoute = StudentsStudentIdLazyRouteImport.update({
+  id: '/$studentId',
+  path: '/$studentId',
+  getParentRoute: () => StudentsLazyRoute,
+} as any).lazy(() =>
+  import('./routes/students.$studentId.lazy').then((d) => d.Route),
+)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/messages': typeof MessagesLazyRoute
   '/settings': typeof SettingsLazyRoute
-  '/students': typeof StudentsLazyRoute
+  '/students': typeof StudentsLazyRouteWithChildren
+  '/students/$studentId': typeof StudentsStudentIdLazyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/messages': typeof MessagesLazyRoute
   '/settings': typeof SettingsLazyRoute
-  '/students': typeof StudentsLazyRoute
+  '/students': typeof StudentsLazyRouteWithChildren
+  '/students/$studentId': typeof StudentsStudentIdLazyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/messages': typeof MessagesLazyRoute
   '/settings': typeof SettingsLazyRoute
-  '/students': typeof StudentsLazyRoute
+  '/students': typeof StudentsLazyRouteWithChildren
+  '/students/$studentId': typeof StudentsStudentIdLazyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/messages' | '/settings' | '/students'
+  fullPaths:
+    | '/'
+    | '/messages'
+    | '/settings'
+    | '/students'
+    | '/students/$studentId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/messages' | '/settings' | '/students'
-  id: '__root__' | '/' | '/messages' | '/settings' | '/students'
+  to: '/' | '/messages' | '/settings' | '/students' | '/students/$studentId'
+  id:
+    | '__root__'
+    | '/'
+    | '/messages'
+    | '/settings'
+    | '/students'
+    | '/students/$studentId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   MessagesLazyRoute: typeof MessagesLazyRoute
   SettingsLazyRoute: typeof SettingsLazyRoute
-  StudentsLazyRoute: typeof StudentsLazyRoute
+  StudentsLazyRoute: typeof StudentsLazyRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -102,14 +126,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/students/$studentId': {
+      id: '/students/$studentId'
+      path: '/$studentId'
+      fullPath: '/students/$studentId'
+      preLoaderRoute: typeof StudentsStudentIdLazyRouteImport
+      parentRoute: typeof StudentsLazyRoute
+    }
   }
 }
+
+interface StudentsLazyRouteChildren {
+  StudentsStudentIdLazyRoute: typeof StudentsStudentIdLazyRoute
+}
+
+const StudentsLazyRouteChildren: StudentsLazyRouteChildren = {
+  StudentsStudentIdLazyRoute: StudentsStudentIdLazyRoute,
+}
+
+const StudentsLazyRouteWithChildren = StudentsLazyRoute._addFileChildren(
+  StudentsLazyRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   MessagesLazyRoute: MessagesLazyRoute,
   SettingsLazyRoute: SettingsLazyRoute,
-  StudentsLazyRoute: StudentsLazyRoute,
+  StudentsLazyRoute: StudentsLazyRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

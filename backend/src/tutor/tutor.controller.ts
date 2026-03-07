@@ -153,6 +153,27 @@ export class TutorController {
         return this.tutorService.gradeSubmission(this.getHubId(req), submissionId, { ...body, status: 'graded' });
     }
 
+    // ===== STUDENT DATA VIEWING (학생 앱 데이터 열람) =====
+    @Get('students/:studentId/overview')
+    getStudentOverview(@Req() req: any, @Param('studentId') studentId: string) {
+        return this.tutorService.getStudentOverview(this.getHubId(req), studentId);
+    }
+
+    @Get('students/:studentId/assignments')
+    getStudentAssignments(@Req() req: any, @Param('studentId') studentId: string) {
+        return this.tutorService.getStudentAssignments(this.getHubId(req), studentId);
+    }
+
+    @Get('students/:studentId/tests')
+    getStudentTests(@Req() req: any, @Param('studentId') studentId: string) {
+        return this.tutorService.getStudentTests(this.getHubId(req), studentId);
+    }
+
+    @Get('students/:studentId/attendance')
+    getStudentAttendance(@Req() req: any, @Param('studentId') studentId: string) {
+        return this.tutorService.getStudentAttendance(this.getHubId(req), studentId);
+    }
+
     // ===== PRIVATE COMMENTS =====
     @Post('comments')
     createPrivateComment(
