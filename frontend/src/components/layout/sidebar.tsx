@@ -20,6 +20,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { WonCircle } from "@/components/icons";
+import { config } from "@/lib/config";
 
 interface NavItem {
   title: string;
@@ -90,6 +91,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [userOpen, setUserOpen] = useState(false);
   const navRef = useRef<HTMLElement>(null);
 
   // 외부 클릭 시 드롭다운 닫기
@@ -353,8 +355,10 @@ export function Sidebar() {
               }}
             >
               {/* 결제 */}
-              <button
-                type="button"
+              <a
+                href={`${config.hubUrl}/products`}
+                target="_blank"
+                rel="noopener noreferrer"
                 style={{
                   position: "relative",
                   display: "flex",
@@ -369,10 +373,10 @@ export function Sidebar() {
                   cursor: "pointer",
                   transition: "all 150ms ease",
                 }}
-                title="결제"
+                title="이용권 구매"
               >
                 <WonCircle style={{ width: "20px", height: "20px" }} />
-              </button>
+              </a>
               {/* 알림 */}
               <button
                 type="button"
@@ -395,8 +399,10 @@ export function Sidebar() {
                 <Bell style={{ width: "20px", height: "20px" }} />
               </button>
               {/* 계정연동 */}
-              <button
-                type="button"
+              <a
+                href={`${config.hubUrl}/account-linkage`}
+                target="_blank"
+                rel="noopener noreferrer"
                 style={{
                   position: "relative",
                   display: "flex",
@@ -414,30 +420,121 @@ export function Sidebar() {
                 title="계정연동"
               >
                 <Users style={{ width: "20px", height: "20px" }} />
-              </button>
-              {/* 로그아웃 */}
-              <button
-                type="button"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  borderRadius: "50px",
-                  padding: "6px 12px",
-                  fontSize: "14px",
-                  fontWeight: 500,
-                  border: "none",
-                  background: "none",
-                  color: "#6b7280",
-                  cursor: "pointer",
-                  marginLeft: "4px",
-                  transition: "all 150ms ease",
-                }}
-                title="로그아웃"
-              >
-                <LogOut style={{ width: "16px", height: "16px" }} />
-                <span>로그아웃</span>
-              </button>
+              </a>
+              {/* 사용자 드롭다운 */}
+              <div style={{ position: "relative", marginLeft: "4px" }}>
+                <button
+                  type="button"
+                  onClick={() => setUserOpen(!userOpen)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    borderRadius: "6px",
+                    padding: "6px 12px",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    border: "none",
+                    background: "none",
+                    color: "#374151",
+                    cursor: "pointer",
+                    transition: "all 150ms ease",
+                  }}
+                >
+                  <span>선생님</span>
+                  <ChevronDown style={{ width: "14px", height: "14px", color: "#9ca3af" }} />
+                </button>
+                {userOpen && (
+                  <>
+                    <div
+                      style={{ position: "fixed", inset: 0, zIndex: 99998 }}
+                      onClick={() => setUserOpen(false)}
+                    />
+                    <div
+                      style={{
+                        position: "absolute",
+                        right: 0,
+                        top: "100%",
+                        marginTop: "4px",
+                        width: "180px",
+                        borderRadius: "10px",
+                        border: "1px solid #e5e7eb",
+                        backgroundColor: "#ffffff",
+                        padding: "4px 0",
+                        boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
+                        zIndex: 99999,
+                      }}
+                    >
+                      <a
+                        href={`${config.hubUrl}/users/profile`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          height: "36px",
+                          padding: "0 14px",
+                          fontSize: "14px",
+                          color: "#374151",
+                          textDecoration: "none",
+                          borderRadius: "6px",
+                          margin: "0 4px",
+                          transition: "background-color 150ms ease",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f3f4f6")}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                      >
+                        마이 페이지
+                      </a>
+                      <a
+                        href={`${config.hubUrl}/users/payment`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          height: "36px",
+                          padding: "0 14px",
+                          fontSize: "14px",
+                          color: "#374151",
+                          textDecoration: "none",
+                          borderRadius: "6px",
+                          margin: "0 4px",
+                          transition: "background-color 150ms ease",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f3f4f6")}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                      >
+                        결제내역
+                      </a>
+                      <div style={{ height: "1px", backgroundColor: "#e5e7eb", margin: "4px 0" }} />
+                      <button
+                        type="button"
+                        onClick={() => setUserOpen(false)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          height: "36px",
+                          padding: "0 14px",
+                          fontSize: "14px",
+                          color: "#ef4444",
+                          border: "none",
+                          background: "none",
+                          width: "calc(100% - 8px)",
+                          borderRadius: "6px",
+                          margin: "0 4px",
+                          cursor: "pointer",
+                          transition: "background-color 150ms ease",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#fef2f2")}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                      >
+                        로그아웃
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Mobile hamburger */}
@@ -554,6 +651,44 @@ export function Sidebar() {
                   paddingRight: "12px",
                 }}
               >
+                <a
+                  href={`${config.hubUrl}/users/profile`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setMobileOpen(false)}
+                  style={{
+                    display: "flex",
+                    width: "100%",
+                    alignItems: "center",
+                    gap: "8px",
+                    borderRadius: "6px",
+                    padding: "8px 12px",
+                    fontSize: "14px",
+                    color: "#6b7280",
+                    textDecoration: "none",
+                  }}
+                >
+                  마이 페이지
+                </a>
+                <a
+                  href={`${config.hubUrl}/users/payment`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setMobileOpen(false)}
+                  style={{
+                    display: "flex",
+                    width: "100%",
+                    alignItems: "center",
+                    gap: "8px",
+                    borderRadius: "6px",
+                    padding: "8px 12px",
+                    fontSize: "14px",
+                    color: "#6b7280",
+                    textDecoration: "none",
+                  }}
+                >
+                  결제내역
+                </a>
                 <button
                   type="button"
                   style={{
@@ -564,7 +699,7 @@ export function Sidebar() {
                     borderRadius: "6px",
                     padding: "8px 12px",
                     fontSize: "14px",
-                    color: "#6b7280",
+                    color: "#ef4444",
                     border: "none",
                     background: "none",
                     cursor: "pointer",
