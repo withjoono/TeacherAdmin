@@ -121,6 +121,93 @@ body {
     background: var(--color-bg-secondary);
 }
 
+/* ─── User Dropdown Popover ─── */
+.gb-header-user-trigger {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-3);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--color-text);
+    background: none;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.gb-header-user-trigger:hover {
+    background: var(--color-bg-secondary);
+}
+
+.gb-header-user-trigger svg {
+    color: var(--color-text-tertiary);
+    transition: transform var(--transition-fast);
+}
+
+.gb-header-user-wrap {
+    position: relative;
+}
+
+.gb-header-user-popover {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 180px;
+    background: var(--color-bg-elevated, #fff);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg, 0 10px 25px rgba(0,0,0,.1));
+    padding: var(--space-1);
+    z-index: calc(var(--z-sticky, 100) + 10);
+    animation: gb-scale-in var(--transition-fast);
+    transform-origin: top right;
+}
+
+.gb-header-user-popover a,
+.gb-header-user-popover button {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 32px;
+    padding: 0 var(--space-3);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-normal, 400);
+    color: var(--color-text);
+    background: none;
+    border: none;
+    border-radius: var(--radius-xs, 4px);
+    text-decoration: none;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.gb-header-user-popover a:hover,
+.gb-header-user-popover button:hover {
+    background: var(--color-bg-secondary);
+}
+
+.gb-header-user-popover-divider {
+    height: 1px;
+    background: var(--color-border-light);
+    margin: var(--space-1) 0;
+}
+
+.gb-header-user-popover .gb-logout-btn {
+    color: var(--color-error, #ef4444);
+}
+
+.gb-header-user-popover .gb-logout-btn:hover {
+    background: var(--color-error-bg, #fef2f2);
+}
+
+.gb-header-user-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--z-sticky, 100) + 5);
+}
+
 /* ═══════════════════════════════════════════
  * CARD — 토스 스타일 카드
  * ═══════════════════════════════════════════ */
