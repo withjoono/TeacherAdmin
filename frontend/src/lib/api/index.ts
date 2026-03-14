@@ -7,4 +7,4 @@ export * from './auth';
 export * from './mentoring';
 export * as teacherApi from './teacher';
 export * as curriculumApi from './curriculum';
-
+export * as studentDetailApi from './student-detail';

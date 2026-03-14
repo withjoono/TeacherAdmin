@@ -9,3 +9,8 @@ automatic_scaling:
 env_variables:
   NODE_ENV: production
   PORT: 8080
+  DATABASE_URL: "postgresql://tsuser:tsuser1234@/geobukschool_dev?host=/cloudsql/ts-back-nest-479305:asia-northeast3:geobuk-db&schema=teacher_admin&search_path=teacher_admin,hub,tutorboard"
+  AUTH_SECRET: "AIetry5Dr+7rPJBj01hYdoKT0gxBk28JD8PPJVEQSa4MBnPGMAwH7tkSUx0BLaBRSysleQlcuSXLLeox0nVhTg=="
+
+beta_settings:
+  cloud_sql_instances: ts-back-nest-479305:asia-northeast3:geobuk-db

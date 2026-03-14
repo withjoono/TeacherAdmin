@@ -20,6 +20,12 @@ export function SSOListener() {
                 window.location.reload();
             }
             setIsSSOLoading(false);
+
+            // DEV 모드: Hub SSO 없이 테스트 가능하도록 자동 인증
+            if (process.env.NODE_ENV === 'development' && !tokens && !useAuthStore.getState().isAuthenticated) {
+                console.info('[DEV] 개발 모드 자동 인증 활성화');
+                useAuthStore.getState().setTokens('dev-mock-token', 'dev-mock-refresh');
+            }
         });
     }, []);
 
