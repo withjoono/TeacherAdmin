@@ -40,18 +40,12 @@ const navItems: NavItem[] = [
   },
   {
     title: "클래스 관리",
-    href: "/class-management",
     icon: Users,
-  },
-  {
-    title: "학생 관리",
-    href: "/student-management",
-    icon: UserCircle,
-  },
-  {
-    title: "학부모 관리",
-    href: "/parent-management",
-    icon: HomeIcon,
+    subItems: [
+      { title: "클래스", href: "/class-management" },
+      { title: "학생 관리", href: "/student-management" },
+      { title: "학부모 관리", href: "/parent-management" },
+    ],
   },
   {
     title: "수업 현황",
