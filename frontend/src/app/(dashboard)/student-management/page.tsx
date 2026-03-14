@@ -14,47 +14,39 @@ import {
   TrendingUp,
   ClipboardCheck,
   Loader2,
+  Users,
 } from "lucide-react";
-import { getMyClasses, getClassStudents, getPrivateComments } from "@/lib/api/teacher";
-import type { ClassInfo, StudentInfo, PrivateComment } from "@/lib/api/teacher";
+import { getLinkedAccounts, type LinkedAccount } from "@/lib/api/hub";
 
 // ================================
 // 학생 관리 페이지
 // ================================
 export default function StudentManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
-  const [allStudents, setAllStudents] = useState<Array<StudentInfo & { className: string }>>([]);
-  const [messages, setMessages] = useState<PrivateComment[]>([]);
+  const [linkedStudents, setLinkedStudents] = useState<LinkedAccount[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 모든 반의 학생 로드
+  // Hub에서 연동된 학생 로드
   useEffect(() => {
-    async function fetchAllStudents() {
+    async function fetchLinkedStudents() {
       try {
         setLoading(true);
-        const classes = await getMyClasses();
-        const studentPromises = (classes || []).map(async (cls: ClassInfo) => {
-          const students = await getClassStudents(cls.id);
-          return (students || []).map((s: StudentInfo) => ({
-            ...s,
-            className: cls.name,
-          }));
-        });
-        const results = await Promise.all(studentPromises);
-        setAllStudents(results.flat());
+        const links = await getLinkedAccounts();
+        // 학생(partner)만 필터링
+        const students = links.filter(l => l.partnerType === 'student');
+        setLinkedStudents(students);
       } catch (err) {
-        console.error('Failed to fetch students:', err);
-        setAllStudents([]);
+        console.error('Failed to fetch linked students:', err);
+        setLinkedStudents([]);
       } finally {
         setLoading(false);
       }
     }
-    fetchAllStudents();
+    fetchLinkedStudents();
   }, []);
 
-  const filteredStudents = allStudents.filter((student) =>
-    student.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredStudents = linkedStudents.filter((student) =>
+    student.partnerName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) {
@@ -93,7 +85,7 @@ export default function StudentManagementPage() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <MessageSquare className="w-8 h-8 mx-auto mb-2 text-orange-500" />
-                <p className="text-2xl font-bold">{allStudents.length}</p>
+                <p className="text-2xl font-bold">{linkedStudents.length}</p>
                 <p className="text-sm text-muted-foreground">전체 학생 수</p>
               </div>
             </CardContent>
@@ -122,30 +114,22 @@ export default function StudentManagementPage() {
               <CardContent>
                 {filteredStudents.length > 0 ? (
                   <div className="space-y-3">
-                    {filteredStudents.map((student, idx) => (
+                    {filteredStudents.map((student) => (
                       <div
-                        key={student.id}
+                        key={student.linkId}
                         className="flex items-center justify-between p-4 rounded-lg border hover:bg-accent/50 transition-colors"
                       >
                         <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center font-semibold text-primary text-xs">
-                            {student.className}
+                          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center font-semibold text-primary">
+                            <Users className="w-5 h-5" />
                           </div>
                           <div>
-                            <p className="font-medium">{student.name}</p>
+                            <p className="font-medium">{student.partnerName}</p>
                             <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                              {student.avgScore && (
-                                <span className="flex items-center gap-1">
-                                  <TrendingUp className="w-3 h-3" />
-                                  평균: {student.avgScore}점
-                                </span>
-                              )}
-                              {student.attendance && (
-                                <span className="flex items-center gap-1">
-                                  <ClipboardCheck className="w-3 h-3" />
-                                  출석률: {student.attendance}%
-                                </span>
-                              )}
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                연동일: {new Date(student.linkedAt).toLocaleDateString('ko-KR')}
+                              </span>
                             </div>
                           </div>
                         </div>
