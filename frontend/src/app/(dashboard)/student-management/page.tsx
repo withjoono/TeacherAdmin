@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,24 +9,17 @@ import { Input } from "@/components/ui/input";
 import {
   Search,
   ExternalLink,
-  TrendingUp,
   Loader2,
   Users,
   Calendar,
   CheckCircle,
-  FolderOpen,
+  Eye,
 } from "lucide-react";
 import { getLinkedAccounts, getMyClasses, setLinkClass, type LinkedAccount, type MentoringClass } from "@/lib/api/hub";
-
-const APP_LABELS: Record<string, string> = {
-  studyplanner: '📅 StudyPlanner',
-  examhub: '📝 ExamHub',
-  mysanggibu: '📋 내생기부',
-  jungsi: '🎯 정시계산기',
-  susi: '📂 수시플래너',
-};
+import { APP_LABELS, openStudentApp } from "@/lib/app-viewer";
 
 export default function StudentManagementPage() {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [linkedStudents, setLinkedStudents] = useState<LinkedAccount[]>([]);
   const [myClasses, setMyClasses] = useState<MentoringClass[]>([]);
@@ -54,7 +48,6 @@ export default function StudentManagementPage() {
     fetchData();
   }, []);
 
-  // 반별/검색 필터링
   const filteredStudents = useMemo(() => {
     return linkedStudents.filter((student) => {
       const matchName = student.partnerName.toLowerCase().includes(searchTerm.toLowerCase());
@@ -64,11 +57,9 @@ export default function StudentManagementPage() {
     });
   }, [linkedStudents, searchTerm, selectedClass]);
 
-  // 반 배정 변경
   const handleClassChange = async (linkId: number, classId: number | null) => {
     try {
       await setLinkClass(linkId, classId);
-      // 로컬 상태 업데이트
       setLinkedStudents(prev => prev.map(s => {
         if (s.linkId === linkId) {
           const cls = myClasses.find(c => c.id === classId);
@@ -79,6 +70,10 @@ export default function StudentManagementPage() {
     } catch (err) {
       console.error('Failed to change class:', err);
     }
+  };
+
+  const goToDetail = (studentId: string) => {
+    router.push(`/student-management/detail?id=${studentId}`);
   };
 
   if (loading) {
@@ -153,12 +148,18 @@ export default function StudentManagementPage() {
                     key={student.linkId}
                     className="flex items-center justify-between p-4 rounded-lg border hover:bg-accent/50 transition-colors"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center font-semibold text-primary">
-                        <Users className="w-5 h-5" />
+                    {/* 좌측: 학생 정보 (클릭 가능) */}
+                    <div
+                      className="flex items-center gap-4 cursor-pointer group flex-1 min-w-0"
+                      onClick={() => goToDetail(student.partnerId)}
+                    >
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center font-semibold text-primary shrink-0 group-hover:bg-primary/20 transition-colors">
+                        {student.partnerName.charAt(0)}
                       </div>
-                      <div>
-                        <p className="font-medium">{student.partnerName}</p>
+                      <div className="min-w-0">
+                        <p className="font-medium group-hover:text-primary transition-colors">
+                          {student.partnerName}
+                        </p>
                         <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
                           <span className="flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
@@ -171,37 +172,51 @@ export default function StudentManagementPage() {
                             </span>
                           )}
                         </div>
-                        {/* 공유 앱 목록 */}
+                        {/* 공유 앱 버튼들 (클릭 → 새 탭 열기) */}
                         {student.sharedApps?.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {student.sharedApps.map(appKey => (
-                              <span key={appKey} className="rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
-                                {APP_LABELS[appKey] || appKey}
-                              </span>
-                            ))}
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {student.sharedApps.map(appKey => {
+                              const label = APP_LABELS[appKey];
+                              return (
+                                <button
+                                  key={appKey}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openStudentApp(appKey, student.partnerId);
+                                  }}
+                                  className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 hover:shadow-sm transition-all cursor-pointer border border-blue-200/50"
+                                  title={`${label?.name || appKey} 열기 (학생 시점)`}
+                                >
+                                  <span>{label?.emoji || '📱'}</span>
+                                  <span>{label?.name || appKey}</span>
+                                  <ExternalLink className="w-2.5 h-2.5 opacity-60" />
+                                </button>
+                              );
+                            })}
                           </div>
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {/* 반 배정 드롭다운 */}
+
+                    {/* 우측: 반 배정 + 상세보기 */}
+                    <div className="flex items-center gap-2 shrink-0 ml-4">
                       <select
                         value={student.classId || ''}
                         onChange={(e) => handleClassChange(student.linkId, e.target.value ? Number(e.target.value) : null)}
                         className="rounded-md border border-input bg-background px-2 py-1 text-sm"
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <option value="">반 미배정</option>
                         {myClasses.map(cls => (
                           <option key={cls.id} value={cls.id}>{cls.name}</option>
                         ))}
                       </select>
-                      <Button variant="outline" size="sm">
-                        <TrendingUp className="w-4 h-4 mr-2" />
-                        플래너 검사
-                      </Button>
-                      <Button size="sm">
-                        <ExternalLink className="w-4 h-4 mr-2" />
-                        페이지 접근
+                      <Button
+                        size="sm"
+                        onClick={() => goToDetail(student.partnerId)}
+                      >
+                        <Eye className="w-4 h-4 mr-1" />
+                        상세보기
                       </Button>
                     </div>
                   </div>

@@ -25,7 +25,10 @@ import {
   FileText,
   User,
   Loader2,
+  ExternalLink,
 } from "lucide-react";
+import { getLinkedAccounts, type LinkedAccount } from "@/lib/api/hub";
+import { APP_LABELS, openStudentApp } from "@/lib/app-viewer";
 import {
   getStudentOverview,
   getStudentAssignments,
@@ -80,6 +83,7 @@ function StudentDetailContent() {
   const [loading, setLoading] = useState(true);
   const [commentText, setCommentText] = useState("");
   const [sending, setSending] = useState(false);
+  const [sharedApps, setSharedApps] = useState<string[]>([]);
 
   useEffect(() => {
     if (!studentId) {
@@ -101,6 +105,15 @@ function StudentDetailContent() {
         setTests(tst);
         setAttendance(att);
         setComments(cmt);
+
+        // 공유 앱 목록 조회 (Hub API)
+        try {
+          const links = await getLinkedAccounts();
+          const match = (Array.isArray(links) ? links : []).find(
+            (l: LinkedAccount) => l.partnerId === studentId && l.partnerType === 'student'
+          );
+          if (match?.sharedApps) setSharedApps(match.sharedApps);
+        } catch { /* Hub API 실패해도 기본 기능은 유지 */ }
       } catch (err) {
         console.error("Failed to fetch student detail:", err);
       } finally {
@@ -185,6 +198,28 @@ function StudentDetailContent() {
             </div>
           </div>
         </div>
+
+        {/* 공유 앱 바로가기 */}
+        {sharedApps.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            <span className="flex items-center text-xs font-medium text-muted-foreground mr-1">앱 열기:</span>
+            {sharedApps.map((appKey) => {
+              const label = APP_LABELS[appKey];
+              return (
+                <button
+                  key={appKey}
+                  onClick={() => openStudentApp(appKey, studentId)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-2 text-sm font-medium shadow-sm hover:bg-accent hover:shadow-md transition-all"
+                  title={`${label?.name || appKey}을(를) 학생 시점으로 열기`}
+                >
+                  <span>{label?.emoji || '📱'}</span>
+                  <span>{label?.name || appKey}</span>
+                  <ExternalLink className="w-3 h-3 opacity-50" />
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* 탭 네비게이션 */}
         <div className="flex gap-1 overflow-x-auto rounded-xl border bg-card p-1">
