@@ -32,7 +32,15 @@ export interface LinkedAccount {
   partnerId: string;
   partnerName: string;
   partnerType: string;
+  classId: number | null;
+  className: string | null;
+  sharedApps: string[];
   linkedAt: string;
+}
+
+export interface MentoringClass {
+  id: number;
+  name: string;
 }
 
 /**
@@ -40,7 +48,22 @@ export interface LinkedAccount {
  */
 export async function getLinkedAccounts(): Promise<LinkedAccount[]> {
   const response = await hubApiClient.get('/mentoring/links');
-  return response.data;
+  return response.data?.data || response.data;
+}
+
+/**
+ * 내 반 목록 조회
+ */
+export async function getMyClasses(): Promise<MentoringClass[]> {
+  const response = await hubApiClient.get('/mentoring/classes');
+  return response.data?.data || response.data;
+}
+
+/**
+ * 반 배정 설정
+ */
+export async function setLinkClass(linkId: number, classId: number | null): Promise<void> {
+  await hubApiClient.patch(`/mentoring/links/${linkId}/class`, { classId });
 }
 
 /**
