@@ -1,0 +1,42 @@
+??Next.js 16.1.1 (Turbopack)
+- Environments: .env.local, .env.production
+
+  Creating an optimized production build ...
+??Compiled successfully in 4.1s
+  Running TypeScript ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/25) ...
+  Generating static pages using 7 workers (6/25) 
+  Generating static pages using 7 workers (12/25) 
+  Generating static pages using 7 workers (18/25) 
+??Generating static pages using 7 workers (25/25) in 910.8ms
+  Finalizing page optimization ...
+
+Route (app)
+????/
+????/_not-found
+????/assignment-management
+????/attendance
+????/auth/login
+????/class-management
+????/class-management/stats
+????/class-management/students
+????/comments
+????/curriculum-management
+????/dashboard
+????/exam-management
+????/exams
+????/exams/new
+????/grading
+????/grading-management
+????/lesson-records
+????/login
+????/parent-management
+????/question-upload
+????/questions/upload
+????/student-management
+????/student-management/detail
+
+
+?? (Static)  prerendered as static content
+

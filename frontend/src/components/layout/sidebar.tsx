@@ -59,26 +59,12 @@ const navItems: NavItem[] = [
     subItems: [
       { title: "수업 계획", href: "/curriculum-management" },
       { title: "수업 기록", href: "/lesson-records" },
-    ],
-  },
-  {
-    title: "출석부",
-    href: "/attendance",
-    icon: CheckSquare,
-  },
-  {
-    title: "테스트",
-    icon: FileText,
-    subItems: [
+      { title: "출석부", href: "/attendance" },
       { title: "시험 관리", href: "/exam-management" },
       { title: "문제 업로드", href: "/question-upload" },
       { title: "채점 관리", href: "/grading-management" },
+      { title: "과제 관리", href: "/assignment-management" },
     ],
-  },
-  {
-    title: "과제 관리",
-    href: "/assignment-management",
-    icon: ClipboardList,
   },
   {
     title: "비공개 코멘트",
