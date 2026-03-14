@@ -5,6 +5,18 @@ import { Bell, Users, ChevronDown, LogOut } from "lucide-react";
 import { WonCircle } from "@/components/icons";
 import { config } from "@/lib/config";
 
+/** Hub URL에 SSO 토큰을 포함시켜 자동 로그인 지원 */
+function getHubUrl(path: string): string {
+  const base = `${config.hubUrl}${path}`;
+  const accessToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
+  if (!accessToken) return base;
+  const url = new URL(base);
+  url.searchParams.set('sso_access_token', accessToken);
+  if (refreshToken) url.searchParams.set('sso_refresh_token', refreshToken);
+  return url.toString();
+}
+
 interface HeaderProps {
   title: string;
 }
@@ -19,7 +31,7 @@ export function Header({ title }: HeaderProps) {
       <div className="gb-header-actions">
         {/* 이용권 구매 */}
         <a
-          href={`${config.hubUrl}/products`}
+          href={getHubUrl('/products')}
           target="_blank"
           rel="noopener noreferrer"
           className="gb-header-icon-btn"
@@ -36,7 +48,7 @@ export function Header({ title }: HeaderProps) {
 
         {/* 계정연동 */}
         <a
-          href={`${config.hubUrl}/account-linkage`}
+          href={getHubUrl('/account-linkage')}
           target="_blank"
           rel="noopener noreferrer"
           className="gb-header-icon-btn"
@@ -58,8 +70,8 @@ export function Header({ title }: HeaderProps) {
             <>
               <div className="gb-header-user-backdrop" onClick={() => setUserOpen(false)} />
               <div className="gb-header-user-popover">
-                <a href={`${config.hubUrl}/users/profile`} target="_blank" rel="noopener noreferrer">마이 페이지</a>
-                <a href={`${config.hubUrl}/users/payment`} target="_blank" rel="noopener noreferrer">결제내역</a>
+                <a href={getHubUrl('/users/profile')} target="_blank" rel="noopener noreferrer">마이 페이지</a>
+                <a href={getHubUrl('/users/payment')} target="_blank" rel="noopener noreferrer">결제내역</a>
                 <div className="gb-header-user-popover-divider" />
                 <button className="gb-logout-btn" onClick={() => { setUserOpen(false); /* TODO: logout */ }}>로그아웃</button>
               </div>

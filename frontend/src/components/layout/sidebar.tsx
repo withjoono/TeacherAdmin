@@ -22,6 +22,18 @@ import {
 import { WonCircle } from "@/components/icons";
 import { config } from "@/lib/config";
 
+/** Hub URL에 SSO 토큰을 포함시켜 자동 로그인 지원 */
+function getHubUrl(path: string): string {
+  const base = `${config.hubUrl}${path}`;
+  const accessToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
+  if (!accessToken) return base;
+  const url = new URL(base);
+  url.searchParams.set('sso_access_token', accessToken);
+  if (refreshToken) url.searchParams.set('sso_refresh_token', refreshToken);
+  return url.toString();
+}
+
 interface NavItem {
   title: string;
   href?: string;
@@ -336,7 +348,7 @@ export function Sidebar() {
             >
               {/* 결제 */}
               <a
-                href={`${config.hubUrl}/products`}
+                href={getHubUrl('/products')}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
@@ -380,7 +392,7 @@ export function Sidebar() {
               </button>
               {/* 계정연동 */}
               <a
-                href={`${config.hubUrl}/account-linkage`}
+                href={getHubUrl('/account-linkage')}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
@@ -446,7 +458,7 @@ export function Sidebar() {
                       }}
                     >
                       <a
-                        href={`${config.hubUrl}/users/profile`}
+                        href={getHubUrl('/users/profile')}
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{
@@ -467,7 +479,7 @@ export function Sidebar() {
                         마이 페이지
                       </a>
                       <a
-                        href={`${config.hubUrl}/users/payment`}
+                        href={getHubUrl('/users/payment')}
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{
@@ -632,7 +644,7 @@ export function Sidebar() {
                 }}
               >
                 <a
-                  href={`${config.hubUrl}/users/profile`}
+                  href={getHubUrl('/users/profile')}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => setMobileOpen(false)}
@@ -651,7 +663,7 @@ export function Sidebar() {
                   마이 페이지
                 </a>
                 <a
-                  href={`${config.hubUrl}/users/payment`}
+                  href={getHubUrl('/users/payment')}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => setMobileOpen(false)}

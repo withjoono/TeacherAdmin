@@ -12,7 +12,7 @@ export const config = {
   frontUrl: isDev ? 'http://localhost:3019' : 'https://teacher-front.web.app',
 
   // Hub SSO URLs
-  hubUrl: isDev ? 'http://localhost:3000' : 'https://www.geobukschool.kr',
+  hubUrl: isDev ? 'http://localhost:3000' : 'https://www.tskool.kr',
   hubApiUrl: isDev ? 'http://localhost:4000' : 'https://ts-back-nest-479305.du.r.appspot.com',
 
   // 환경

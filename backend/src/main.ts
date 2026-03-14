@@ -12,6 +12,8 @@ async function bootstrap() {
       // 프로덕션 도메인
       'https://teacher-front.web.app', // TeacherAdmin 프론트엔드
       'https://ts-front-479305.web.app', // Hub 프론트엔드
+      'https://www.tskool.kr',
+      'https://tskool.kr',
       'https://www.geobukschool.kr',
       'https://geobukschool.kr',
       // 로컬 개발 환경
@@ -21,8 +23,7 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // 글로벌 prefix
-  app.setGlobalPrefix('api');
+  // 글로벌 prefix 없음 (프론트엔드가 /tutor/... 직접 호출)
 
   const port = process.env.PORT ?? 4019;
   await app.listen(port);

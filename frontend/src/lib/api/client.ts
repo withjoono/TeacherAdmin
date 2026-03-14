@@ -124,6 +124,11 @@ authClient.interceptors.response.use(
 
       const refreshToken = tokenManager.getRefreshToken();
       if (!refreshToken) {
+        // SSO 코드 교환 중이면 리다이렉트 하지 않음 (무한 루프 방지)
+        const hasSSOCode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('sso_code');
+        if (hasSSOCode) {
+          return Promise.reject(error);
+        }
         // 리프레시 토큰이 없으면 Hub SSO 로그인으로 리다이렉트
         tokenManager.clearTokens();
         if (typeof window !== 'undefined') {
@@ -151,10 +156,12 @@ authClient.interceptors.response.use(
         }
         return authClient(originalRequest);
       } catch (refreshError) {
-        // 토큰 갱신 실패 시 Hub SSO 로그인으로 리다이렉트
+        // 토큰 갱신 실패 시
         processQueue(refreshError, null);
         tokenManager.clearTokens();
-        if (typeof window !== 'undefined') {
+        // SSO 코드 교환 중이면 리다이렉트 하지 않음 (무한 루프 방지)
+        const hasSSOCode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('sso_code');
+        if (!hasSSOCode && typeof window !== 'undefined') {
           const { redirectToHubLogin } = await import('../sso');
           redirectToHubLogin();
         }
