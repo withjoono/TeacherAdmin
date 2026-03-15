@@ -17,11 +17,11 @@ export const config = {
 
   // 연동 앱 URL 매핑
   appUrls: {
-    studyplanner: isDev ? 'http://localhost:3004' : 'https://studyplanner.tskool.kr',
-    examhub: isDev ? 'http://localhost:3003' : 'https://examhub.tskool.kr',
-    mysanggibu: isDev ? 'http://localhost:3005' : 'https://mysanggibu.tskool.kr',
-    susi: isDev ? 'http://localhost:3001' : 'https://susi.tskool.kr',
-    jungsi: isDev ? 'http://localhost:3002' : 'https://jungsi.tskool.kr',
+    studyplanner: isDev ? 'http://localhost:3004' : 'https://studyplanner-new.web.app',
+    examhub: isDev ? 'http://localhost:3003' : 'https://examhub-app.web.app',
+    mysanggibu: isDev ? 'http://localhost:3005' : 'https://ms-front.web.app',
+    susi: isDev ? 'http://localhost:3001' : 'https://susi-front.web.app',
+    jungsi: isDev ? 'http://localhost:3002' : 'https://jungsi-front.web.app',
   } as Record<string, string>,
 
   // 환경
