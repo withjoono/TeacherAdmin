@@ -6,7 +6,7 @@
  * URL: /student-management/detail?id=<studentId>
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense } from "react";
 import { Header } from "@/components/layout/header";
@@ -16,8 +16,6 @@ import {
   ClipboardList,
   BarChart3,
   CalendarCheck,
-  MessageSquare,
-  Send,
   Clock,
   CheckCircle,
   XCircle,
@@ -26,6 +24,8 @@ import {
   User,
   Loader2,
   ExternalLink,
+  MessageSquare,
+  Send,
 } from "lucide-react";
 import { getLinkedAccounts, type LinkedAccount } from "@/lib/api/hub";
 import { APP_LABELS, openStudentApp } from "@/lib/app-viewer";
@@ -34,16 +34,19 @@ import {
   getStudentAssignments,
   getStudentTests,
   getStudentAttendance,
-  getStudentComments,
-  createStudentComment,
 } from "@/lib/api/student-detail";
 import type {
   StudentOverview,
   StudentAssignment,
   StudentTest,
   StudentAttendanceRecord,
-  StudentPrivateComment,
 } from "@/lib/api/student-detail";
+import {
+  createHubComment,
+  getHubConversation,
+  markAllHubCommentsRead,
+  type HubComment,
+} from "@/lib/api/hub-comments";
 
 type TabId = "overview" | "assignments" | "tests" | "attendance";
 
@@ -79,11 +82,12 @@ function StudentDetailContent() {
   const [assignments, setAssignments] = useState<StudentAssignment[]>([]);
   const [tests, setTests] = useState<StudentTest[]>([]);
   const [attendance, setAttendance] = useState<StudentAttendanceRecord[]>([]);
-  const [comments, setComments] = useState<StudentPrivateComment[]>([]);
+  const [hubComments, setHubComments] = useState<HubComment[]>([]);
   const [loading, setLoading] = useState(true);
   const [commentText, setCommentText] = useState("");
   const [sending, setSending] = useState(false);
   const [sharedApps, setSharedApps] = useState<string[]>([]);
+  const commentScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!studentId) {
@@ -93,18 +97,23 @@ function StudentDetailContent() {
     async function fetchAll() {
       setLoading(true);
       try {
-        const [ov, asgn, tst, att, cmt] = await Promise.all([
+        const [ov, asgn, tst, att] = await Promise.all([
           getStudentOverview(studentId),
           getStudentAssignments(studentId),
           getStudentTests(studentId),
           getStudentAttendance(studentId),
-          getStudentComments(studentId),
         ]);
         setOverview(ov);
         setAssignments(asgn);
         setTests(tst);
         setAttendance(att);
-        setComments(cmt);
+
+        // Hub 코멘트 조회
+        try {
+          const convo = await getHubConversation(studentId);
+          setHubComments(convo.comments);
+          markAllHubCommentsRead(studentId).catch(() => {});
+        } catch { /* Hub 코멘트 실패해도 기본 기능 유지 */ }
 
         // 공유 앱 목록 조회 (Hub API)
         try {
@@ -123,18 +132,29 @@ function StudentDetailContent() {
     fetchAll();
   }, [studentId]);
 
+  const TAB_LABELS: Record<string, string> = {
+    overview: "학습 요약",
+    assignments: "과제 현황",
+    tests: "성적 현황",
+    attendance: "출석 현황",
+  };
+
   const handleSendComment = useCallback(async () => {
     if (!commentText.trim() || !overview?.student || sending) return;
     setSending(true);
     try {
-      const newComment = await createStudentComment({
-        targetId: overview.student.id,
-        studentId: overview.student.id,
-        contextType: activeTab,
+      const newComment = await createHubComment({
+        target_id: overview.student.id,
         content: commentText.trim(),
+        source_app: "tutorboard",
+        context_type: activeTab,
+        context_label: TAB_LABELS[activeTab] || activeTab,
       });
-      setComments((prev) => [...prev, newComment]);
+      setHubComments((prev) => [...prev, newComment]);
       setCommentText("");
+      setTimeout(() => {
+        commentScrollRef.current?.scrollTo(0, commentScrollRef.current.scrollHeight);
+      }, 50);
     } catch (err) {
       console.error("Failed to send comment:", err);
     } finally {
@@ -177,97 +197,105 @@ function StudentDetailContent() {
   return (
     <div className="flex flex-col">
       <Header title="학생 상세" />
-      <div className="flex-1 p-6 space-y-6">
-        {/* 상단: 학생 정보 + 뒤로가기 */}
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => router.push("/student-management")}
-            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-lg font-bold text-primary-foreground">
-              {overview.student.username.charAt(0)}
-            </div>
-            <div>
-              <h2 className="text-lg font-bold">{overview.student.username}</h2>
-              <p className="text-xs text-muted-foreground">
-                {overview.classes.map((c) => `${c.name} · ${c.subject}`).join(" | ")}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* 공유 앱 바로가기 */}
-        {sharedApps.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            <span className="flex items-center text-xs font-medium text-muted-foreground mr-1">앱 열기:</span>
-            {sharedApps.map((appKey) => {
-              const label = APP_LABELS[appKey];
-              return (
-                <button
-                  key={appKey}
-                  onClick={() => openStudentApp(appKey, studentId)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-2 text-sm font-medium shadow-sm hover:bg-accent hover:shadow-md transition-all"
-                  title={`${label?.name || appKey}을(를) 학생 시점으로 열기`}
-                >
-                  <span>{label?.emoji || '📱'}</span>
-                  <span>{label?.name || appKey}</span>
-                  <ExternalLink className="w-3 h-3 opacity-50" />
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* 탭 네비게이션 */}
-        <div className="flex gap-1 overflow-x-auto rounded-xl border bg-card p-1">
-          {TABS.map((tab) => (
+      <div className="flex-1 flex">
+        {/* 좌측: 학생 데이터 */}
+        <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+          {/* 상단: 학생 정보 + 뒤로가기 */}
+          <div className="flex items-center gap-4">
             <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
-                activeTab === tab.id
-                  ? "bg-primary/10 text-primary shadow-sm"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-              }`}
+              onClick={() => router.push("/student-management")}
+              className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
-              <tab.icon className="h-4 w-4" />
-              <span className="hidden sm:inline">{tab.label}</span>
+              <ArrowLeft className="h-5 w-5" />
             </button>
-          ))}
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-lg font-bold text-primary-foreground">
+                {overview.student.username.charAt(0)}
+              </div>
+              <div>
+                <h2 className="text-lg font-bold">{overview.student.username}</h2>
+                <p className="text-xs text-muted-foreground">
+                  {overview.classes.map((c) => `${c.name} · ${c.subject}`).join(" | ")}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 공유 앱 바로가기 */}
+          {sharedApps.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              <span className="flex items-center text-xs font-medium text-muted-foreground mr-1">앱 열기:</span>
+              {sharedApps.map((appKey) => {
+                const label = APP_LABELS[appKey];
+                return (
+                  <button
+                    key={appKey}
+                    onClick={() => openStudentApp(appKey, studentId)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-2 text-sm font-medium shadow-sm hover:bg-accent hover:shadow-md transition-all"
+                    title={`${label?.name || appKey}을(를) 학생 시점으로 열기`}
+                  >
+                    <span>{label?.emoji || '📱'}</span>
+                    <span>{label?.name || appKey}</span>
+                    <ExternalLink className="w-3 h-3 opacity-50" />
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* 탭 네비게이션 */}
+          <div className="flex gap-1 overflow-x-auto rounded-xl border bg-card p-1">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+                  activeTab === tab.id
+                    ? "bg-primary/10 text-primary shadow-sm"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                }`}
+              >
+                <tab.icon className="h-4 w-4" />
+                <span className="hidden sm:inline">{tab.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* 탭 콘텐츠 */}
+          <div>
+            {activeTab === "overview" && <OverviewTab overview={overview} />}
+            {activeTab === "assignments" && <AssignmentsTab assignments={assignments} />}
+            {activeTab === "tests" && <TestsTab tests={tests} />}
+            {activeTab === "attendance" && <AttendanceTab attendance={attendance} />}
+          </div>
         </div>
 
-        {/* 탭 콘텐츠 */}
-        <div>
-          {activeTab === "overview" && <OverviewTab overview={overview} />}
-          {activeTab === "assignments" && <AssignmentsTab assignments={assignments} />}
-          {activeTab === "tests" && <TestsTab tests={tests} />}
-          {activeTab === "attendance" && <AttendanceTab attendance={attendance} />}
-        </div>
-
-        {/* 코멘트 섹션 */}
-        <div className="rounded-xl border bg-card p-5">
-          <h3 className="mb-4 flex items-center gap-2 text-base font-semibold">
+        {/* 우측: 코멘트 사이드 패널 */}
+        <div className="w-80 lg:w-96 border-l bg-card flex flex-col shrink-0">
+          <div className="px-4 py-3 border-b flex items-center gap-2">
             <MessageSquare className="h-4 w-4 text-primary" />
-            코멘트
-            {overview.stats.commentCount > 0 && (
+            <h3 className="text-sm font-semibold">코멘트</h3>
+            {hubComments.length > 0 && (
               <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                {overview.stats.commentCount}
+                {hubComments.length}
               </span>
             )}
-          </h3>
+            <span className="ml-auto text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+              {TAB_LABELS[activeTab]}
+            </span>
+          </div>
 
-          <div className="mb-4 max-h-64 space-y-3 overflow-y-auto">
-            {comments.length === 0 ? (
-              <p className="py-4 text-center text-sm text-muted-foreground">아직 코멘트가 없습니다.</p>
+          <div ref={commentScrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+            {hubComments.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">아직 코멘트가 없습니다.<br/>아래에서 코멘트를 남겨보세요.</p>
             ) : (
-              comments.map((comment) => <CommentBubble key={comment.id} comment={comment} />)
+              hubComments.map((comment) => (
+                <HubCommentBubble key={comment.id} comment={comment} />
+              ))
             )}
           </div>
 
-          <div className="flex gap-2">
+          <div className="p-3 border-t flex gap-2">
             <input
               type="text"
               value={commentText}
@@ -421,14 +449,22 @@ function StatCard({ label, value, sub, variant }: { label: string; value: string
   return (<div className={`rounded-xl border p-4 ${s.bg}`}><p className="text-xs font-medium text-muted-foreground">{label}</p><p className={`mt-1 text-2xl font-bold ${s.v}`}>{value}</p><p className="mt-0.5 text-[11px] text-muted-foreground">{sub}</p></div>);
 }
 
-function CommentBubble({ comment }: { comment: StudentPrivateComment }) {
-  const isT = comment.author.role === "teacher";
+function HubCommentBubble({ comment }: { comment: HubComment }) {
+  const isTeacher = comment.authorRole === "teacher" || comment.authorRole === "academy";
   return (
-    <div className={`flex ${isT ? "justify-end" : "justify-start"}`}>
-      <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${isT ? "bg-primary text-primary-foreground shadow-md" : "border bg-secondary text-secondary-foreground"}`}>
-        <div className="flex items-center gap-1.5 text-[10px] opacity-70"><User className="h-2.5 w-2.5" />{comment.author.username}{comment.contextType && <span className="rounded bg-black/10 px-1">{comment.contextType}</span>}</div>
-        <p className="mt-0.5 text-sm">{comment.content}</p>
-        <div className={`mt-1 flex items-center justify-end gap-1 text-[10px] ${isT ? "opacity-70" : "text-muted-foreground"}`}><Clock className="h-2.5 w-2.5" />{new Date(comment.createdAt).toLocaleDateString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
+    <div className={`flex ${isTeacher ? "justify-end" : "justify-start"}`}>
+      <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${isTeacher ? "bg-primary text-primary-foreground shadow-md" : "border bg-secondary text-secondary-foreground"}`}>
+        {comment.contextLabel && (
+          <div className={`flex items-center gap-1 text-[10px] mb-1 ${isTeacher ? "opacity-60" : "text-muted-foreground"}`}>
+            <span>📌</span>
+            <span>{comment.contextLabel}</span>
+          </div>
+        )}
+        <p className="text-sm whitespace-pre-wrap">{comment.content}</p>
+        <div className={`mt-1 flex items-center justify-end gap-1 text-[10px] ${isTeacher ? "opacity-60" : "text-muted-foreground"}`}>
+          <Clock className="h-2.5 w-2.5" />
+          {new Date(comment.createdAt).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}
+        </div>
       </div>
     </div>
   );
