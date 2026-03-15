@@ -190,4 +190,19 @@ export class TutorController {
     getPrivateComments(@Req() req: any, @Param('studentId') studentId: string) {
         return this.tutorService.getPrivateComments(this.getHubId(req), studentId);
     }
+
+    // ===== CLASS REQUESTS =====
+    @Get('class-requests')
+    getClassRequests(@Req() req: any) {
+        return this.tutorService.getClassRequests(this.getHubId(req));
+    }
+
+    @Patch('class-requests/:id/respond')
+    respondToClassRequest(
+        @Req() req: any,
+        @Param('id') id: string,
+        @Body() body: { action: 'accepted' | 'rejected'; className?: string; subject?: string; existingClassId?: string },
+    ) {
+        return this.tutorService.respondToClassRequest(this.getHubId(req), id, body);
+    }
 }

@@ -140,6 +140,14 @@ enum UserRole {
   @@schema("tutorboard")
 }
 
+enum ClassRequestStatus {
+  pending
+  accepted
+  rejected
+
+  @@schema("tutorboard")
+}
+
 enum SubmissionStatus {
   pending
   submitted
@@ -200,6 +208,8 @@ model TbUser {
   sentComments         TbPrivateComment[]    @relation("CommentAuthor")
   receivedComments     TbPrivateComment[]    @relation("CommentTarget")
   sentMessages         TbMessage[]
+  sentRequests         TbClassRequest[]      @relation("RequestSender")
+  receivedRequests     TbClassRequest[]      @relation("RequestReceiver")
 
   @@map("tb_users")
   @@schema("tutorboard")
@@ -224,6 +234,7 @@ model TbClass {
   lessonPlans TbLessonPlan[]
   payments    TbPayment[]
   attendances TbAttendance[]
+  classRequests TbClassRequest[]
 
   @@map("tb_classes")
   @@schema("tutorboard")
@@ -517,4 +528,26 @@ model HubSharedSchedule {
   @@index([hubUserId, eventDate], name: "idx_hub_schedule_date")
   @@map("hub_shared_schedule")
   @@schema("hub")
+}
+
+// ===== CLASS REQUESTS (Student/Parent → Teacher) =====
+
+model TbClassRequest {
+  id          String             @id @default(uuid())
+  requesterId String             @map("requester_id")
+  teacherId   String             @map("teacher_id")
+  subject     String?
+  message     String?
+  status      ClassRequestStatus @default(pending)
+  classId     String?            @map("class_id")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  respondedAt DateTime?          @map("responded_at")
+
+  // Relations
+  requester TbUser   @relation("RequestSender", fields: [requesterId], references: [id])
+  teacher   TbUser   @relation("RequestReceiver", fields: [teacherId], references: [id])
+  class     TbClass? @relation(fields: [classId], references: [id])
+
+  @@map("tb_class_requests")
+  @@schema("tutorboard")
 }

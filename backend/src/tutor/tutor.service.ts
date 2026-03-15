@@ -663,6 +663,125 @@ export class TutorService {
         });
     }
 
+    // ===== CLASS REQUESTS =====
+
+    async getClassRequests(hubId: string) {
+        const user = await this.resolveTeacher(hubId);
+
+        return this.prisma.tbClassRequest.findMany({
+            where: { teacherId: user.id },
+            include: {
+                requester: { select: { id: true, username: true, email: true, role: true, avatarUrl: true } },
+                class: { select: { id: true, name: true, subject: true } },
+            },
+            orderBy: [
+                { status: 'asc' }, // pending first
+                { createdAt: 'desc' },
+            ],
+        });
+    }
+
+    async respondToClassRequest(hubId: string, requestId: string, data: {
+        action: 'accepted' | 'rejected';
+        className?: string;
+        subject?: string;
+        existingClassId?: string;
+    }) {
+        const user = await this.resolveTeacher(hubId);
+
+        const request = await this.prisma.tbClassRequest.findUnique({
+            where: { id: requestId },
+            include: { requester: true },
+        });
+
+        if (!request) throw new NotFoundException('요청을 찾을 수 없습니다.');
+        if (request.teacherId !== user.id) throw new ForbiddenException('이 요청에 대한 권한이 없습니다.');
+        if (request.status !== 'pending') throw new ForbiddenException('이미 처리된 요청입니다.');
+
+        if (data.action === 'accepted') {
+            let classId: string;
+
+            if (data.existingClassId) {
+                // 기존 반에 배정
+                await this.verifyClassOwnership(user.id, data.existingClassId);
+                classId = data.existingClassId;
+            } else {
+                // 새 반 개설
+                const inviteCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+                const newClass = await this.prisma.tbClass.create({
+                    data: {
+                        teacherId: user.id,
+                        name: data.className || `${request.subject || '수업'} - ${request.requester.username}`,
+                        subject: data.subject || request.subject || '기타',
+                        inviteCode,
+                    },
+                });
+                classId = newClass.id;
+            }
+
+            // 학생 등록
+            await this.prisma.tbClassEnrollment.upsert({
+                where: {
+                    classId_studentId: {
+                        classId,
+                        studentId: request.requesterId,
+                    },
+                },
+                create: {
+                    classId,
+                    studentId: request.requesterId,
+                },
+                update: {},
+            });
+
+            // 요청 상태 업데이트
+            await this.prisma.tbClassRequest.update({
+                where: { id: requestId },
+                data: {
+                    status: 'accepted',
+                    classId,
+                    respondedAt: new Date(),
+                },
+            });
+
+            // 학생에게 알림
+            const cls = await this.prisma.tbClass.findUnique({ where: { id: classId } });
+            await this.prisma.tbNotification.create({
+                data: {
+                    userId: request.requesterId,
+                    message: `📚 [${cls?.name}]에 등록되었습니다! 수업 현황을 확인하세요.`,
+                    type: 'general',
+                    referenceId: classId,
+                    referenceType: 'class',
+                },
+            });
+
+            return { status: 'accepted', classId };
+        } else {
+            // 거절
+            await this.prisma.tbClassRequest.update({
+                where: { id: requestId },
+                data: {
+                    status: 'rejected',
+                    respondedAt: new Date(),
+                },
+            });
+
+            // 요청자에게 알림
+            await this.prisma.tbNotification.create({
+                data: {
+                    userId: request.requesterId,
+                    message: `수업 요청이 거절되었습니다. 선생님에게 문의해 주세요.`,
+                    type: 'general',
+                    referenceId: requestId,
+                    referenceType: 'class_request',
+                },
+            });
+
+            return { status: 'rejected' };
+        }
+    }
+
     // ===== HELPERS =====
 
     private async verifyClassOwnership(teacherId: string, classId: string) {
