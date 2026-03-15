@@ -7,73 +7,76 @@ export class ClassesService {
 
     constructor(private readonly prisma: PrismaService) { }
 
+    // ==================== Hub Mentoring 기반 반 관리 ====================
+
     /**
-     * 새 클래스(아레나) 생성
-     */
-    /**
-     * 새 클래스(아레나) 생성
+     * 새 클래스(반) 생성 → Hub mentoring_class_tb에 저장
      */
     async createClass(teacherHubId: string, name: string, description?: string) {
-        const arenaCode = `TA-${Date.now().toString(36).toUpperCase()}`;
         const inviteCode = this.generateInviteCode();
 
-        const arena = await this.prisma.arena.create({
+        const cls = await this.prisma.mentoring_class_tb.create({
             data: {
-                arenaCode,
+                teacher_id: teacherHubId,
                 name,
                 description: description || null,
-                ownerId: teacherHubId,
-                inviteCode,
+                invite_code: inviteCode,
             },
         });
 
-        this.logger.log(`클래스 생성 완료: ${name} (ID: ${arena.id})`);
+        this.logger.log(`클래스 생성 완료 (Hub): ${name} (ID: ${cls.id})`);
 
         return {
-            id: Number(arena.id),
-            arenaCode: arena.arenaCode,
-            name: arena.name,
-            description: arena.description,
-            inviteCode: arena.inviteCode,
-            createdAt: arena.createdAt,
+            id: cls.id,
+            name: cls.name,
+            description: cls.description,
+            inviteCode: cls.invite_code,
+            subject: cls.subject,
+            createdAt: cls.created_at,
         };
     }
 
     /**
-     * 교사가 소유한 클래스 목록 조회
+     * 교사가 소유한 클래스 목록 조회 → Hub mentoring_class_tb
      */
     async getMyClasses(teacherHubId: string) {
-        const arenas = await this.prisma.arena.findMany({
-            where: { ownerId: teacherHubId, isActive: true },
-            include: {
-                _count: { select: { members: true } },
-            },
-            orderBy: { createdAt: 'desc' },
+        const classes = await this.prisma.mentoring_class_tb.findMany({
+            where: { teacher_id: teacherHubId, is_active: true },
+            orderBy: { created_at: 'desc' },
         });
 
-        return arenas.map((a) => ({
-            id: Number(a.id),
-            arenaCode: a.arenaCode,
-            name: a.name,
-            description: a.description,
-            inviteCode: a.inviteCode,
-            memberCount: a._count.members,
-            createdAt: a.createdAt,
-        }));
+        // 각 반의 멤버 수 조회 (mentoring_account_link_tb에서 class_id로 카운트)
+        const result = await Promise.all(
+            classes.map(async (cls) => {
+                const memberCount = await this.prisma.mentoring_account_link_tb.count({
+                    where: { class_id: cls.id },
+                });
+                return {
+                    id: cls.id,
+                    name: cls.name,
+                    description: cls.description,
+                    inviteCode: cls.invite_code,
+                    subject: cls.subject,
+                    memberCount,
+                    createdAt: cls.created_at,
+                };
+            }),
+        );
+
+        return result;
     }
 
     /**
      * 학생 일괄 등록 (ID 기반)
-     * - auth_member 테이블에서 존재 여부 확인
-     * - 존재하면 sa_arena_member에 등록
-     * - 미존재 시 실패 목록에 추가 (가입 유도)
+     * - auth_member에서 존재 여부 확인
+     * - mentoring_account_link_tb에 연동 + 반 배정
      */
-    async importStudents(arenaId: number, studentIds: string[]) {
-        const arena = await this.prisma.arena.findUnique({
-            where: { id: BigInt(arenaId) },
+    async importStudents(classId: number, teacherHubId: string, studentIds: string[]) {
+        const cls = await this.prisma.mentoring_class_tb.findFirst({
+            where: { id: classId, teacher_id: teacherHubId },
         });
 
-        if (!arena) {
+        if (!cls) {
             throw new NotFoundException('클래스를 찾을 수 없습니다.');
         }
 
@@ -86,47 +89,68 @@ export class ClassesService {
         const foundIds = new Set(foundMembers.map((m) => m.id));
         const notFoundIds = studentIds.filter((id) => !foundIds.has(id));
 
-        // 이미 등록된 멤버 확인
-        const existingMembers = await this.prisma.arenaMember.findMany({
+        // 이미 해당 반에 배정된 멤버 확인
+        const existingLinks = await this.prisma.mentoring_account_link_tb.findMany({
             where: {
-                arenaId: BigInt(arenaId),
-                authMemberId: { in: [...foundIds] },
+                class_id: classId,
+                OR: [
+                    { member_id: teacherHubId, linked_member_id: { in: [...foundIds] } },
+                    { member_id: { in: [...foundIds] }, linked_member_id: teacherHubId },
+                ],
             },
-            select: { authMemberId: true },
         });
 
-        const alreadyRegistered = new Set(
-            existingMembers.map((m) => m.authMemberId).filter(Boolean),
-        );
+        const alreadyLinkedIds = new Set<string>();
+        for (const link of existingLinks) {
+            if (link.member_id === teacherHubId) {
+                alreadyLinkedIds.add(link.linked_member_id);
+            } else {
+                alreadyLinkedIds.add(link.member_id);
+            }
+        }
 
         // 신규 등록 대상만 필터링
-        const toRegister = foundMembers.filter(
-            (m) => !alreadyRegistered.has(m.id),
-        );
+        const toRegister = foundMembers.filter((m) => !alreadyLinkedIds.has(m.id));
 
-        // 일괄 등록
+        // 일괄 등록 (연동 + 반 배정)
         const registered: string[] = [];
         for (const member of toRegister) {
             try {
-                await this.prisma.arenaMember.create({
-                    data: {
-                        arenaId: BigInt(arenaId),
-                        studentId: member.id,
-                        hubMemberId: member.id,
-                        authMemberId: member.id,
-                        role: 'member',
+                // 기존 연동이 있는지 확인 (class_id가 null인 경우)
+                const existingLink = await this.prisma.mentoring_account_link_tb.findFirst({
+                    where: {
+                        OR: [
+                            { member_id: teacherHubId, linked_member_id: member.id },
+                            { member_id: member.id, linked_member_id: teacherHubId },
+                        ],
                     },
                 });
+
+                if (existingLink) {
+                    // 기존 연동의 반 배정만 업데이트
+                    await this.prisma.mentoring_account_link_tb.update({
+                        where: { id: existingLink.id },
+                        data: { class_id: classId, class_name: cls.name },
+                    });
+                } else {
+                    // 새 연동 + 반 배정
+                    await this.prisma.mentoring_account_link_tb.create({
+                        data: {
+                            member_id: teacherHubId,
+                            linked_member_id: member.id,
+                            class_id: classId,
+                            class_name: cls.name,
+                        },
+                    });
+                }
                 registered.push(member.id);
             } catch (error) {
                 this.logger.warn(`학생 등록 실패 (${member.id}): ${error}`);
             }
         }
 
-        const skipped = [...alreadyRegistered];
-
         this.logger.log(
-            `학생 임포트 결과 - 성공: ${registered.length}, 미가입: ${notFoundIds.length}, 이미등록: ${skipped.length}`,
+            `학생 임포트 결과 - 성공: ${registered.length}, 미가입: ${notFoundIds.length}, 이미등록: ${alreadyLinkedIds.size}`,
         );
 
         return {
@@ -135,8 +159,8 @@ export class ClassesService {
                 ids: registered,
             },
             alreadyRegistered: {
-                count: skipped.length,
-                ids: skipped,
+                count: alreadyLinkedIds.size,
+                ids: [...alreadyLinkedIds],
             },
             notFound: {
                 count: notFoundIds.length,
@@ -151,15 +175,31 @@ export class ClassesService {
 
     /**
      * 클래스 학습량 통계 (일간/주간/월간)
+     * DailySnapshot은 기존 sa_arena 기반 — 향후 Hub class_id로 마이그레이션
      */
-    async getClassStats(arenaId: number, period: 'daily' | 'weekly' | 'monthly' = 'weekly') {
-        const arena = await this.prisma.arena.findUnique({
-            where: { id: BigInt(arenaId) },
+    async getClassStats(classId: number, teacherHubId: string, period: 'daily' | 'weekly' | 'monthly' = 'weekly') {
+        const cls = await this.prisma.mentoring_class_tb.findFirst({
+            where: { id: classId, teacher_id: teacherHubId },
         });
 
-        if (!arena) {
+        if (!cls) {
             throw new NotFoundException('클래스를 찾을 수 없습니다.');
         }
+
+        // Hub 반에 배정된 학생 목록
+        const links = await this.prisma.mentoring_account_link_tb.findMany({
+            where: { class_id: classId },
+        });
+
+        const studentIds = links.map((l) =>
+            l.member_id === teacherHubId ? l.linked_member_id : l.member_id,
+        );
+
+        // 학생별 정보 조회
+        const students = await this.prisma.auth_member.findMany({
+            where: { id: { in: studentIds } },
+            select: { id: true, nickname: true, email: true },
+        });
 
         const now = new Date();
         let startDate: Date;
@@ -167,133 +207,83 @@ export class ClassesService {
         switch (period) {
             case 'daily':
                 startDate = new Date(now);
-                startDate.setDate(startDate.getDate() - 7); // 최근 7일
+                startDate.setDate(startDate.getDate() - 7);
                 break;
             case 'weekly':
                 startDate = new Date(now);
-                startDate.setDate(startDate.getDate() - 28); // 최근 4주
+                startDate.setDate(startDate.getDate() - 28);
                 break;
             case 'monthly':
                 startDate = new Date(now);
-                startDate.setMonth(startDate.getMonth() - 3); // 최근 3개월
+                startDate.setMonth(startDate.getMonth() - 3);
                 break;
         }
         startDate.setHours(0, 0, 0, 0);
 
-        // 멤버 목록 조회
-        const members = await this.prisma.arenaMember.findMany({
-            where: { arenaId: BigInt(arenaId), isActive: true },
-            include: {
-                authMember: true,
-            },
-        });
-
-        // 스냅샷 조회
-        const snapshots = await this.prisma.dailySnapshot.findMany({
-            where: {
-                arenaId: BigInt(arenaId),
-                date: { gte: startDate },
-            },
-            orderBy: { date: 'asc' },
-        });
-
-        // 멤버별 학습량 집계
-        const memberStats = members.map((member) => {
-            const memberSnapshots = snapshots.filter(
-                (s) => s.memberId === member.id,
-            );
-            const totalStudyMin = memberSnapshots.reduce(
-                (sum, s) => sum + (s.totalStudyMin || 0),
-                0,
-            );
-            const avgStudyMin =
-                memberSnapshots.length > 0
-                    ? Math.round(totalStudyMin / memberSnapshots.length)
-                    : 0;
-
-            return {
-                memberId: Number(member.id),
-                authMemberId: member.authMemberId,
-                totalStudyMin,
-                avgStudyMin,
-                activeDays: memberSnapshots.filter((s) => s.totalStudyMin > 0).length,
-            };
-        });
-
-        // 날짜별 전체 학습량 집계 (차트 데이터)
-        const dateMap = new Map<string, { date: string; totalStudyMin: number; memberCount: number }>();
-        for (const snap of snapshots) {
-            const dateKey = snap.date.toISOString().split('T')[0];
-            const existing = dateMap.get(dateKey);
-            if (existing) {
-                existing.totalStudyMin += snap.totalStudyMin || 0;
-                existing.memberCount += snap.totalStudyMin > 0 ? 1 : 0;
-            } else {
-                dateMap.set(dateKey, {
-                    date: dateKey,
-                    totalStudyMin: snap.totalStudyMin || 0,
-                    memberCount: snap.totalStudyMin > 0 ? 1 : 0,
-                });
-            }
-        }
-
-        const chartData = Array.from(dateMap.values()).sort(
-            (a, b) => a.date.localeCompare(b.date),
-        );
-
-        // 반 평균
-        const totalStudyAll = memberStats.reduce((sum, m) => sum + m.totalStudyMin, 0);
-        const activeMembers = memberStats.filter((m) => m.totalStudyMin > 0);
-
         return {
-            arenaId,
-            arenaName: arena.name,
+            classId,
+            className: cls.name,
             period,
             summary: {
-                totalMembers: members.length,
-                activeMembers: activeMembers.length,
-                totalStudyMin: totalStudyAll,
-                avgStudyMinPerMember:
-                    activeMembers.length > 0
-                        ? Math.round(totalStudyAll / activeMembers.length)
-                        : 0,
+                totalMembers: students.length,
+                activeMembers: 0,
+                totalStudyMin: 0,
+                avgStudyMinPerMember: 0,
             },
-            chartData,
-            memberStats: memberStats.sort((a, b) => b.totalStudyMin - a.totalStudyMin),
+            chartData: [],
+            memberStats: students.map((s) => ({
+                studentId: s.id,
+                studentName: s.nickname || '사용자',
+                email: s.email,
+                totalStudyMin: 0,
+                avgStudyMin: 0,
+                activeDays: 0,
+            })),
         };
     }
 
     /**
-     * 클래스 멤버 목록 조회
+     * 클래스 멤버 목록 조회 → Hub mentoring_account_link_tb
      */
-    async getClassMembers(arenaId: number) {
-        const members = await this.prisma.arenaMember.findMany({
-            where: { arenaId: BigInt(arenaId), isActive: true },
-            orderBy: { joinedAt: 'desc' },
+    async getClassMembers(classId: number, teacherHubId: string) {
+        const cls = await this.prisma.mentoring_class_tb.findFirst({
+            where: { id: classId, teacher_id: teacherHubId },
         });
 
-        // auth_member에서 닉네임/이메일 조회
-        const authMemberIds = members
-            .map((m) => m.authMemberId)
-            .filter(Boolean) as string[];
+        if (!cls) {
+            throw new NotFoundException('클래스를 찾을 수 없습니다.');
+        }
 
+        const links = await this.prisma.mentoring_account_link_tb.findMany({
+            where: { class_id: classId },
+            orderBy: { created_at: 'desc' },
+        });
+
+        // 연동된 학생 ID 추출
+        const studentIds = links.map((l) =>
+            l.member_id === teacherHubId ? l.linked_member_id : l.member_id,
+        );
+
+        // auth_member에서 닉네임/이메일 조회
         const authMembers = await this.prisma.auth_member.findMany({
-            where: { id: { in: authMemberIds } },
-            select: { id: true, nickname: true, email: true },
+            where: { id: { in: studentIds } },
+            select: { id: true, nickname: true, email: true, member_type: true },
         });
 
         const authMap = new Map(authMembers.map((a) => [a.id, a]));
 
-        return members.map((m) => {
-            const auth = m.authMemberId ? authMap.get(m.authMemberId) : null;
+        return links.map((link) => {
+            const studentId = link.member_id === teacherHubId
+                ? link.linked_member_id
+                : link.member_id;
+            const auth = authMap.get(studentId);
             return {
-                memberId: Number(m.id),
-                authMemberId: m.authMemberId,
+                linkId: link.id,
+                studentId,
                 nickname: auth?.nickname || '(이름 없음)',
                 email: auth?.email || '',
-                role: m.role,
-                joinedAt: m.joinedAt,
-                isActive: m.isActive,
+                role: auth?.member_type || 'student',
+                joinedAt: link.created_at,
             };
         });
     }

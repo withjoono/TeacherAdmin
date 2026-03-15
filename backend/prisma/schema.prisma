@@ -130,6 +130,36 @@ model auth_member_s {
   @@schema("hub")
 }
 
+/// Hub Mentoring 반 (Single Source of Truth)
+model mentoring_class_tb {
+  id          Int      @id @default(autoincrement())
+  teacher_id  String   @db.VarChar(30)
+  name        String   @db.VarChar(100)
+  subject     String?  @db.VarChar(50)
+  description String?  @db.Text
+  invite_code String?  @unique @db.VarChar(10)
+  max_members Int      @default(50)
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now()) @db.Timestamp()
+
+  @@index([teacher_id])
+  @@schema("hub")
+}
+
+/// Hub 계정 연동 (반 배정 포함)
+model mentoring_account_link_tb {
+  id               Int      @id @default(autoincrement())
+  member_id        String   @db.VarChar(30)
+  linked_member_id String   @db.VarChar(30)
+  class_id         Int?
+  class_name       String?  @db.VarChar(100)
+  shared_apps      String?  @db.VarChar(500)
+  created_at       DateTime @default(now()) @db.Timestamp()
+
+  @@index([member_id])
+  @@index([linked_member_id])
+  @@schema("hub")
+}
 // ===== TUTORBOARD ENUMS =====
 
 enum UserRole {

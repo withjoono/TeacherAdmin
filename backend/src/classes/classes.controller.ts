@@ -17,7 +17,7 @@ export class ClassesController {
     constructor(private readonly classesService: ClassesService) { }
 
     /**
-     * POST /classes - 새 클래스 생성
+     * POST /classes - 새 클래스 생성 (Hub mentoring_class_tb)
      */
     @Post()
     async createClass(
@@ -33,7 +33,7 @@ export class ClassesController {
     }
 
     /**
-     * GET /classes - 내 클래스 목록 조회
+     * GET /classes - 내 클래스 목록 조회 (Hub mentoring_class_tb)
      */
     @Get()
     async getMyClasses(@Request() req: any) {
@@ -42,15 +42,18 @@ export class ClassesController {
     }
 
     /**
-     * POST /classes/:id/students - 학생 일괄 등록
+     * POST /classes/:id/students - 학생 일괄 등록 (Hub mentoring_account_link_tb)
      */
     @Post(':id/students')
     async importStudents(
+        @Request() req: any,
         @Param('id') id: string,
         @Body() body: { studentIds: string[] },
     ) {
+        const teacherHubId = req.user.jti;
         return this.classesService.importStudents(
             parseInt(id, 10),
+            teacherHubId,
             body.studentIds,
         );
     }
@@ -60,11 +63,14 @@ export class ClassesController {
      */
     @Get(':id/stats')
     async getClassStats(
+        @Request() req: any,
         @Param('id') id: string,
         @Query('period') period?: 'daily' | 'weekly' | 'monthly',
     ) {
+        const teacherHubId = req.user.jti;
         return this.classesService.getClassStats(
             parseInt(id, 10),
+            teacherHubId,
             period || 'weekly',
         );
     }
@@ -73,7 +79,14 @@ export class ClassesController {
      * GET /classes/:id/members - 클래스 멤버 목록
      */
     @Get(':id/members')
-    async getClassMembers(@Param('id') id: string) {
-        return this.classesService.getClassMembers(parseInt(id, 10));
+    async getClassMembers(
+        @Request() req: any,
+        @Param('id') id: string,
+    ) {
+        const teacherHubId = req.user.jti;
+        return this.classesService.getClassMembers(
+            parseInt(id, 10),
+            teacherHubId,
+        );
     }
 }
