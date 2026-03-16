@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import {
   LayoutDashboard,
@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import { WonCircle } from "@/components/icons";
 import { config } from "@/lib/config";
+import { useAuthStore } from "@/lib/auth";
+import { logout as logoutApi } from "@/lib/api/auth";
 
 /** Hub URL에 SSO 토큰을 포함시켜 자동 로그인 지원 */
 function getHubUrl(path: string): string {
@@ -81,10 +83,23 @@ const navItems: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [userOpen, setUserOpen] = useState(false);
   const navRef = useRef<HTMLElement>(null);
+
+  const handleLogout = async () => {
+    try {
+      await logoutApi();
+    } catch (e) {
+      console.error('Logout error:', e);
+    }
+    useAuthStore.getState().logout();
+    setUserOpen(false);
+    setMobileOpen(false);
+    router.push('/login');
+  };
 
   // 외부 클릭 시 드롭다운 닫기
   useEffect(() => {
@@ -502,7 +517,7 @@ export function Sidebar() {
                       <div style={{ height: "1px", backgroundColor: "#e5e7eb", margin: "4px 0" }} />
                       <button
                         type="button"
-                        onClick={() => setUserOpen(false)}
+                        onClick={handleLogout}
                         style={{
                           display: "flex",
                           alignItems: "center",
@@ -683,6 +698,7 @@ export function Sidebar() {
                 </a>
                 <button
                   type="button"
+                  onClick={handleLogout}
                   style={{
                     display: "flex",
                     width: "100%",
