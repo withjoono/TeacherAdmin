@@ -17,9 +17,9 @@ export const Footer = () => {
                             <span>서울시 성북구 화랑로 211 성북구 기술창업센터 105호</span>
                         </div>
                         <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm font-medium pt-1">
-                            <a href="https://www.geobukschool.kr/explain/service" target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 transition-colors">이용약관</a>
-                            <a href="https://www.geobukschool.kr/explain/refund" target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 transition-colors">환불규정</a>
-                            <a href="https://www.geobukschool.kr/explain/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold hover:underline">개인정보처리방침</a>
+                            <a href="https://www.tskool.kr/explain/service" target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 transition-colors">이용약관</a>
+                            <a href="https://www.tskool.kr/explain/refund" target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 transition-colors">환불규정</a>
+                            <a href="https://www.tskool.kr/explain/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold hover:underline">개인정보처리방침</a>
                         </div>
                     </div>
                     <div className="flex flex-col items-center sm:items-end gap-3">

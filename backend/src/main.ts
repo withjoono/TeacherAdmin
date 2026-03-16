@@ -16,6 +16,8 @@ async function bootstrap() {
       'https://tskool.kr',
       'https://www.geobukschool.kr',
       'https://geobukschool.kr',
+      'https://tskool.kr',
+      'https://www.tskool.kr',
       // 로컬 개발 환경
       'http://localhost:3019',  // teacher_admin frontend
       'http://localhost:3006',  // StudyArena frontend
