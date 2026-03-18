@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,6 +14,9 @@ import {
   Eye,
   UserCircle,
   Filter,
+  GraduationCap,
+  TrendingUp,
+  BookOpen,
 } from "lucide-react";
 import { getLinkedAccounts, getMyClasses, setLinkClass, type LinkedAccount, type MentoringClass } from "@/lib/api/hub";
 import { APP_LABELS, openStudentApp } from "@/lib/app-viewer";
@@ -88,14 +90,23 @@ export default function StudentManagementPage() {
     router.push(`/student-management/detail?id=${studentId}`);
   };
 
+  const assignedCount = linkedStudents.filter(s => s.classId).length;
+  const appLinkedCount = linkedStudents.filter(s => s.sharedApps?.length > 0).length;
+
   if (loading) {
     return (
-      <div className="flex flex-col">
-        <Header title="학생 관리" />
-        <div className="flex-1 flex items-center justify-center p-12">
-          <div className="flex flex-col items-center gap-3">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">학생 정보를 불러오는 중...</p>
+      <div className="flex flex-col min-h-[80vh]">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                <GraduationCap className="w-8 h-8 text-white" />
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white flex items-center justify-center shadow-md">
+                <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground font-medium">학생 정보를 불러오는 중...</p>
           </div>
         </div>
       </div>
@@ -104,50 +115,86 @@ export default function StudentManagementPage() {
 
   return (
     <div className="flex flex-col">
-      <Header title="학생 관리" />
+      {/* ─── Hero Banner ─── */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700">
+        {/* Decorative background elements */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/20 blur-3xl" />
+          <div className="absolute -bottom-32 -left-32 w-80 h-80 rounded-full bg-blue-300/30 blur-3xl" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[200px] bg-gradient-to-r from-indigo-400/20 to-transparent rounded-full blur-3xl rotate-12" />
+        </div>
 
-      <div className="flex-1 p-6">
-        <div className="max-w-7xl mx-auto space-y-8">
-          {/* ─── Header + Search Bar ─── */}
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold tracking-tight">연동 학생</h1>
-                <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
-                  {linkedStudents.length}명
-                </span>
+        <div className="relative max-w-7xl mx-auto px-6 py-8">
+          {/* Title Row */}
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
+            <div className="flex items-center gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm border border-white/20 shadow-lg">
+                <GraduationCap className="w-7 h-7 text-white" />
               </div>
-            </div>
-
-            {/* Search + Filter Row */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="학생 이름으로 검색..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 rounded-xl h-11"
-                />
-              </div>
-              <div className="relative">
-                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                <select
-                  value={selectedClass}
-                  onChange={(e) => setSelectedClass(e.target.value)}
-                  className="h-11 pl-9 pr-4 rounded-xl border border-input bg-background text-sm appearance-none cursor-pointer min-w-[140px]"
-                >
-                  <option value="all">전체 반</option>
-                  <option value="none">미배정</option>
-                  {myClasses.map(cls => (
-                    <option key={cls.id} value={cls.id}>{cls.name}</option>
-                  ))}
-                </select>
+              <div>
+                <h1 className="text-2xl font-bold text-white tracking-tight">학생 관리</h1>
+                <p className="text-blue-100/80 text-sm mt-0.5">연동된 학생을 관리하고 학습 현황을 확인하세요</p>
               </div>
             </div>
           </div>
 
-          {/* ─── Student Card Grid ─── */}
+          {/* Stats Row */}
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            <div className="rounded-xl bg-white/10 backdrop-blur-sm border border-white/15 px-4 py-3">
+              <div className="flex items-center gap-2 mb-1">
+                <Users className="w-4 h-4 text-blue-200" />
+                <span className="text-xs text-blue-200 font-medium">전체 학생</span>
+              </div>
+              <p className="text-2xl font-bold text-white">{linkedStudents.length}<span className="text-sm font-normal text-blue-200 ml-1">명</span></p>
+            </div>
+            <div className="rounded-xl bg-white/10 backdrop-blur-sm border border-white/15 px-4 py-3">
+              <div className="flex items-center gap-2 mb-1">
+                <CheckCircle className="w-4 h-4 text-emerald-300" />
+                <span className="text-xs text-blue-200 font-medium">반 배정</span>
+              </div>
+              <p className="text-2xl font-bold text-white">{assignedCount}<span className="text-sm font-normal text-blue-200 ml-1">명</span></p>
+            </div>
+            <div className="rounded-xl bg-white/10 backdrop-blur-sm border border-white/15 px-4 py-3">
+              <div className="flex items-center gap-2 mb-1">
+                <BookOpen className="w-4 h-4 text-amber-300" />
+                <span className="text-xs text-blue-200 font-medium">앱 연동</span>
+              </div>
+              <p className="text-2xl font-bold text-white">{appLinkedCount}<span className="text-sm font-normal text-blue-200 ml-1">명</span></p>
+            </div>
+          </div>
+
+          {/* Search + Filter Row */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
+              <Input
+                placeholder="학생 이름으로 검색..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 rounded-xl h-11 bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:bg-white/15 focus:border-white/40"
+              />
+            </div>
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50 pointer-events-none" />
+              <select
+                value={selectedClass}
+                onChange={(e) => setSelectedClass(e.target.value)}
+                className="h-11 pl-9 pr-4 rounded-xl border border-white/20 bg-white/10 text-white text-sm appearance-none cursor-pointer min-w-[140px] focus:outline-none focus:bg-white/15"
+              >
+                <option value="all" className="text-gray-900">전체 반</option>
+                <option value="none" className="text-gray-900">미배정</option>
+                {myClasses.map(cls => (
+                  <option key={cls.id} value={cls.id} className="text-gray-900">{cls.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── Student Card Grid ─── */}
+      <div className="flex-1 p-6 bg-gray-50/50">
+        <div className="max-w-7xl mx-auto">
           {filteredStudents.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {filteredStudents.map((student, idx) => {
@@ -155,12 +202,12 @@ export default function StudentManagementPage() {
                 return (
                   <div
                     key={student.linkId}
-                    className="group rounded-2xl border bg-card p-5 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
+                    className="group rounded-2xl border bg-white p-5 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
                   >
                     {/* Student Info */}
                     <div className="flex items-start gap-3.5 mb-4">
                       <div
-                        className={`flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${grad} text-white text-lg font-bold shadow-sm shrink-0 cursor-pointer group-hover:scale-105 transition-transform`}
+                        className={`flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${grad} text-white text-lg font-bold shadow-md shadow-black/10 shrink-0 cursor-pointer group-hover:scale-110 transition-transform duration-300`}
                         onClick={() => goToDetail(student.partnerId)}
                       >
                         {student.partnerName.charAt(0)}
@@ -212,7 +259,7 @@ export default function StudentManagementPage() {
                     )}
 
                     {/* Actions: Class assign + Detail */}
-                    <div className="flex items-center gap-2 pt-3 border-t">
+                    <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
                       <select
                         value={student.classId || ''}
                         onChange={(e) => handleClassChange(student.linkId, e.target.value ? Number(e.target.value) : null)}
@@ -227,7 +274,7 @@ export default function StudentManagementPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="rounded-lg shrink-0"
+                        className="rounded-lg shrink-0 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200"
                         onClick={() => goToDetail(student.partnerId)}
                       >
                         <Eye className="w-4 h-4 mr-1" />
@@ -239,8 +286,10 @@ export default function StudentManagementPage() {
               })}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed bg-muted/30 py-16">
-              <UserCircle className="w-14 h-14 text-muted-foreground/30 mb-4" />
+            <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed bg-white py-20">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center mb-4">
+                <UserCircle className="w-8 h-8 text-blue-400" />
+              </div>
               <h3 className="text-lg font-semibold mb-1">
                 {searchTerm || selectedClass !== "all" ? "검색 결과가 없습니다" : "연동된 학생이 없습니다"}
               </h3>
