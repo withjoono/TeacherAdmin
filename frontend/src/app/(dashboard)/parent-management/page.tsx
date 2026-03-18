@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Search,
   MessageSquare,
@@ -10,7 +8,6 @@ import {
   Loader2,
   Users,
   UserRound,
-  Heart,
 } from "lucide-react";
 import { getMyClasses, getClassStudents } from "@/lib/api/teacher";
 import type { ClassInfo, StudentInfo } from "@/lib/api/teacher";
@@ -23,15 +20,6 @@ interface ParentInfo {
   phone: string;
   email: string;
 }
-
-const avatarGradients = [
-  "from-blue-500 to-indigo-600",
-  "from-emerald-500 to-teal-600",
-  "from-violet-500 to-purple-600",
-  "from-orange-500 to-rose-600",
-  "from-cyan-500 to-blue-600",
-  "from-pink-500 to-fuchsia-600",
-];
 
 export default function ParentManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -76,117 +64,127 @@ export default function ParentManagementPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col min-h-[80vh] items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-3" />
-        <p className="text-sm text-muted-foreground">학부모 정보를 불러오는 중...</p>
+      <div className="gb-page-dashboard gb-stack gb-stack-6" style={{ paddingTop: "var(--space-10)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "300px" }}>
+          <Loader2 style={{ width: 32, height: 32, color: "var(--color-text-disabled)", animation: "spin 1s linear infinite" }} />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* ─── Compact Header ─── */}
-      <div className="border-b bg-white">
-        <div className="max-w-7xl mx-auto px-6 py-5">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
-                <Heart className="w-5 h-5" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold tracking-tight">학부모 관리</h1>
-                <p className="text-xs text-muted-foreground mt-0.5">학부모 연락처와 소통 현황을 확인하세요</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 border border-blue-100 px-3 py-1.5 text-xs font-semibold text-blue-700">
-                <Users className="w-3.5 h-3.5" /> 학부모 {parents.length}명
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-700">
-                <UserRound className="w-3.5 h-3.5" /> 학생 {parents.length}명
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-700">
-                <Home className="w-3.5 h-3.5" /> {classCount}개 반
-              </span>
-              <Button size="sm" className="rounded-lg ml-2 bg-blue-600 hover:bg-blue-700 shadow-sm h-8 text-xs">
-                <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
-                일괄 메시지
-              </Button>
-            </div>
-          </div>
-
-          {/* Search */}
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="학부모명 또는 학생명으로 검색..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 rounded-lg h-10"
-            />
-          </div>
+    <div className="gb-page-dashboard gb-stack gb-stack-8" style={{ paddingTop: "var(--space-10)" }}>
+      {/* 페이지 헤더 */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+        <div className="gb-page-header" style={{ marginBottom: 0 }}>
+          <h1 className="gb-page-title">학부모 관리</h1>
+          <p className="gb-page-desc">학부모 연락처와 소통 현황을 확인하세요</p>
         </div>
+        <button className="gb-btn gb-btn-primary">
+          <MessageSquare style={{ width: 18, height: 18 }} />
+          일괄 메시지 발송
+        </button>
       </div>
 
-      {/* ─── Parent Cards Grid ─── */}
-      <div className="flex-1 p-6 bg-gray-50/60">
-        <div className="max-w-7xl mx-auto">
-          {filteredParents.length > 0 ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredParents.map((parent, idx) => {
-                const grad = avatarGradients[idx % avatarGradients.length];
-                return (
-                  <div
-                    key={parent.id}
-                    className="group rounded-2xl border bg-white p-5 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${grad} text-white text-lg shadow-sm shrink-0`}>
-                        <Home className="w-5 h-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-sm truncate">{parent.name}</h3>
-                        <div className="flex items-center gap-2 mt-1.5">
-                          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                            <UserRound className="w-3 h-3" />
-                            {parent.studentName}
-                          </span>
-                          <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-600 font-medium">
-                            {parent.className}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+      {/* 상단: 통계 카드 */}
+      <div className="gb-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))" }}>
+        <StatCard label="전체 학부모" value={parents.length} unit="명" icon={Users} />
+        <StatCard label="담당 학생" value={parents.length} unit="명" icon={UserRound} />
+        <StatCard label="소속 반" value={classCount} unit="개" icon={Home} />
+      </div>
 
-                    <div className="mt-4 pt-3 border-t border-gray-100">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full rounded-md h-8 text-xs hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-all"
-                      >
-                        <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
-                        쪽지 보내기
-                      </Button>
-                    </div>
+      {/* 검색 */}
+      <div style={{ position: "relative", maxWidth: 400 }}>
+        <Search style={{
+          position: "absolute", left: "var(--space-4)", top: "50%", transform: "translateY(-50%)",
+          width: 16, height: 16, color: "var(--color-text-disabled)", pointerEvents: "none",
+        }} />
+        <input
+          type="text"
+          className="gb-input"
+          placeholder="학부모명 또는 학생명으로 검색..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{ paddingLeft: 40 }}
+        />
+      </div>
+
+      {/* 학부모 카드 그리드 */}
+      {filteredParents.length > 0 ? (
+        <div className="gb-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))" }}>
+          {filteredParents.map((parent) => (
+            <div key={parent.id} className="gb-card">
+              <div className="gb-row gb-row-3" style={{ marginBottom: "var(--space-3)" }}>
+                <div style={{
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  width: 44, height: 44, borderRadius: "var(--radius-md)",
+                  background: "var(--color-primary-50, var(--color-bg-secondary))",
+                  flexShrink: 0,
+                }}>
+                  <Home style={{ width: 20, height: 20, color: "var(--color-primary)" }} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontSize: "var(--text-base)", fontWeight: "var(--weight-semibold)",
+                    color: "var(--color-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}>
+                    {parent.name}
                   </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed bg-white py-20">
-              <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center mb-4">
-                <Users className="w-7 h-7 text-blue-400" />
+                  <div className="gb-row gb-row-2" style={{ marginTop: "var(--space-1)" }}>
+                    <span className="gb-badge gb-badge-neutral" style={{ gap: 4 }}>
+                      <UserRound style={{ width: 12, height: 12 }} />
+                      {parent.studentName}
+                    </span>
+                    <span className="gb-badge gb-badge-primary" style={{ gap: 4 }}>
+                      {parent.className}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <h3 className="text-lg font-semibold mb-1">
-                {searchTerm ? "검색 결과가 없습니다" : "등록된 학부모가 없습니다"}
-              </h3>
-              <p className="text-sm text-muted-foreground text-center px-8">
-                {searchTerm
-                  ? "다른 검색어를 시도해보세요"
-                  : "학생이 등록되면 학부모 정보가 자동으로 표시됩니다"}
-              </p>
+
+              <div style={{ paddingTop: "var(--space-3)", borderTop: "1px solid var(--color-border-light)" }}>
+                <button className="gb-btn gb-btn-outline gb-btn-sm gb-btn-full">
+                  <MessageSquare style={{ width: 16, height: 16 }} />
+                  쪽지 보내기
+                </button>
+              </div>
             </div>
-          )}
+          ))}
+        </div>
+      ) : (
+        <div className="gb-card">
+          <div className="gb-empty-state" style={{ padding: "var(--space-16) var(--space-4)" }}>
+            <div className="gb-empty-icon">👨‍👩‍👧</div>
+            <div className="gb-empty-title">
+              {searchTerm ? "검색 결과가 없습니다" : "등록된 학부모가 없습니다"}
+            </div>
+            <div className="gb-empty-desc">
+              {searchTerm
+                ? "다른 검색어를 시도해보세요"
+                : "학생이 등록되면 학부모 정보가 자동으로 표시됩니다"}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StatCard({ label, value, unit, icon: Icon }: { label: string; value: number; unit: string; icon: any }) {
+  return (
+    <div className="gb-stat-card">
+      <div className="gb-stat-label">{label}</div>
+      <div className="gb-row gb-row-3" style={{ justifyContent: "space-between" }}>
+        <div className="gb-stat-value">
+          {value}
+          <span className="gb-stat-unit">{unit}</span>
+        </div>
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "center",
+          width: 40, height: 40, borderRadius: "var(--radius-full)",
+          background: "var(--color-primary-50, var(--color-bg-secondary))",
+        }}>
+          <Icon style={{ width: 20, height: 20, color: "var(--color-primary)" }} />
         </div>
       </div>
     </div>
