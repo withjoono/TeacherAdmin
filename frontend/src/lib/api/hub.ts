@@ -47,7 +47,7 @@ export interface MentoringClass {
  * 연동된 계정 목록 조회 (Hub 백엔드)
  */
 export async function getLinkedAccounts(): Promise<LinkedAccount[]> {
-  const response = await hubApiClient.get('/mentoring/links');
+  const response = await hubApiClient.get('/account-link/links');
   return response.data?.data || response.data;
 }
 
@@ -55,7 +55,7 @@ export async function getLinkedAccounts(): Promise<LinkedAccount[]> {
  * 내 반 목록 조회
  */
 export async function getMyClasses(): Promise<MentoringClass[]> {
-  const response = await hubApiClient.get('/mentoring/classes');
+  const response = await hubApiClient.get('/account-link/classes');
   return response.data?.data || response.data;
 }
 
@@ -63,12 +63,12 @@ export async function getMyClasses(): Promise<MentoringClass[]> {
  * 반 배정 설정
  */
 export async function setLinkClass(linkId: number, classId: number | null): Promise<void> {
-  await hubApiClient.patch(`/mentoring/links/${linkId}/class`, { classId });
+  await hubApiClient.patch(`/account-link/links/${linkId}/class`, { classId });
 }
 
 /**
  * 연동 해제
  */
 export async function unlinkAccount(linkId: number): Promise<void> {
-  await hubApiClient.delete(`/mentoring/links/${linkId}`);
+  await hubApiClient.delete(`/account-link/links/${linkId}`);
 }
