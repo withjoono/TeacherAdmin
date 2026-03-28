@@ -1,18 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Header } from "@/components/layout/header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
 import {
   Plus,
   Pencil,
@@ -20,8 +8,6 @@ import {
   BookOpen,
   Calendar,
   Loader2,
-  ChevronDown,
-  ChevronUp,
   X,
 } from "lucide-react";
 import { getMyArenaClasses } from "@/lib/api/classes";
@@ -173,266 +159,298 @@ export default function CurriculumManagementPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col">
-        <Header title="수업 계획" />
-        <div className="flex-1 flex items-center justify-center p-6">
-          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      <div className="gb-page-dashboard gb-stack gb-stack-6" style={{ paddingTop: "var(--space-10)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "300px" }}>
+          <Loader2 style={{ width: 32, height: 32, color: "var(--color-text-disabled)", animation: "spin 1s linear infinite" }} />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col">
-      <Header title="수업 계획" />
+    <div className="gb-page-dashboard gb-stack gb-stack-8" style={{ paddingTop: "var(--space-10)" }}>
+      {/* 페이지 헤더 */}
+      <div className="gb-page-header" style={{ marginBottom: 0 }}>
+        <h1 className="gb-page-title">수업 계획</h1>
+        <p className="gb-page-desc">클래스별 수업 진도와 예정을 관리하세요</p>
+      </div>
 
-      <div className="flex-1 p-6 space-y-6">
+      <div className="gb-stack gb-stack-6">
         {/* 반 선택 */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex gap-2 flex-wrap items-center">
-              <span className="text-sm font-medium text-muted-foreground mr-2">
-                클래스 선택
-              </span>
-              {classes.map((cls) => (
-                <button
-                  key={cls.id}
-                  onClick={() => setSelectedClassId(String(cls.id))}
-                  className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${String(cls.id) === selectedClassId
-                      ? "bg-primary text-primary-foreground shadow-md"
-                      : "bg-muted hover:bg-muted/80"
-                    }`}
-                >
-                  {cls.name}
-                </button>
-              ))}
-              {classes.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                  클래스가 없습니다. 클래스 관리에서 먼저 생성하세요.
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="gb-card">
+          <div style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)", color: "var(--color-text-tertiary)", marginBottom: "var(--space-3)" }}>
+            클래스 선택
+          </div>
+          <div className="gb-row gb-row-3" style={{ flexWrap: "wrap" }}>
+            {classes.map((cls) => (
+              <button
+                key={cls.id}
+                onClick={() => setSelectedClassId(String(cls.id))}
+                className={`gb-btn ${String(cls.id) === selectedClassId ? 'gb-btn-primary' : 'gb-btn-outline'}`}
+              >
+                {cls.name}
+              </button>
+            ))}
+            {classes.length === 0 && (
+              <p className="gb-page-desc">클래스가 없습니다. 클래스 관리에서 먼저 생성하세요.</p>
+            )}
+          </div>
+        </div>
 
         {/* 수업 계획 목록 */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <BookOpen className="w-5 h-5" />
-                수업 계획
-              </CardTitle>
-              <Button size="sm" onClick={() => setShowCreateForm(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                새 계획 추가
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {/* 생성 폼 (인라인) */}
-            {showCreateForm && (
-              <div className="mb-6 p-4 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-semibold">새 수업 계획</h4>
-                  <button onClick={() => setShowCreateForm(false)}>
-                    <X className="w-4 h-4 text-muted-foreground" />
-                  </button>
+        <div className="gb-card">
+          <div className="gb-row gb-row-4" style={{ justifyContent: "space-between", marginBottom: "var(--space-6)" }}>
+            <h2 className="gb-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 0 }}>
+              <BookOpen style={{ width: 18, height: 18, color: 'var(--color-primary)' }}/>
+              수업 계획
+            </h2>
+            <button
+              className="gb-btn gb-btn-primary"
+              onClick={() => setShowCreateForm(true)}
+            >
+              <Plus style={{ width: 16, height: 16 }} />
+              새 계획 추가
+            </button>
+          </div>
+
+          {/* 생성 폼 (인라인) */}
+          {showCreateForm && (
+            <div className="gb-stack gb-stack-3" style={{ marginBottom: "var(--space-8)", padding: "var(--space-4)", borderRadius: "var(--radius-lg)", border: "2px dashed var(--color-border)", background: "var(--color-primary-50, var(--color-bg-secondary))" }}>
+              <div className="gb-row" style={{ justifyContent: "space-between" }}>
+                <h4 style={{ fontSize: "var(--text-base)", fontWeight: "var(--weight-semibold)", color: "var(--color-text)" }}>새 수업 계획</h4>
+                <button
+                  className="gb-header-icon-btn"
+                  onClick={() => setShowCreateForm(false)}
+                >
+                  <X style={{ width: 16, height: 16 }} />
+                </button>
+              </div>
+              
+              <input
+                className="gb-input"
+                placeholder="제목 *"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+              />
+              <textarea
+                className="gb-input"
+                placeholder="설명 (선택사항)"
+                value={newDesc}
+                onChange={(e) => setNewDesc(e.target.value)}
+                rows={2}
+                style={{ resize: "none" }}
+              />
+              
+              <div className="gb-row gb-row-4" style={{ justifyContent: "space-between" }}>
+                <div className="gb-row gb-row-2">
+                  <Calendar style={{ width: 16, height: 16, color: "var(--color-text-tertiary)" }} />
+                  <input
+                    type="date"
+                    className="gb-input"
+                    value={newDate}
+                    onChange={(e) => setNewDate(e.target.value)}
+                    style={{ width: "auto" }}
+                  />
                 </div>
-                <Input
-                  placeholder="제목 *"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                />
-                <textarea
-                  placeholder="설명 (선택사항)"
-                  value={newDesc}
-                  onChange={(e) => setNewDesc(e.target.value)}
-                  rows={2}
-                  className="w-full px-3 py-2 rounded-md border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
-                />
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <Input
-                      type="date"
-                      value={newDate}
-                      onChange={(e) => setNewDate(e.target.value)}
-                      className="w-auto"
-                    />
-                  </div>
-                  <div className="flex-1" />
-                  <Button
-                    size="sm"
-                    variant="outline"
+                <div className="gb-row gb-row-2">
+                  <button
+                    className="gb-btn gb-btn-secondary"
                     onClick={() => setShowCreateForm(false)}
                   >
                     취소
-                  </Button>
-                  <Button
-                    size="sm"
+                  </button>
+                  <button
+                    className="gb-btn gb-btn-primary"
                     onClick={handleCreate}
                     disabled={creating || !newTitle.trim()}
                   >
-                    {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : "생성"}
-                  </Button>
+                    {creating ? <Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} /> : "생성"}
+                  </button>
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            {/* 계획 리스트 */}
-            {plansLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : lessonPlans.length > 0 ? (
-              <div className="space-y-3">
-                {lessonPlans.map((plan) => (
-                  <div
-                    key={plan.id}
-                    className="p-4 rounded-lg border hover:bg-accent/30 transition-colors"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <h4 className="font-semibold">{plan.title}</h4>
-                        {plan.description && (
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {plan.description}
-                          </p>
-                        )}
-                        {plan.scheduledDate && (
-                          <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            {plan.scheduledDate.split("T")[0]}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => openEdit(plan)}
-                          className="p-1.5 rounded-md hover:bg-accent transition-colors"
-                          title="수정"
-                        >
-                          <Pencil className="w-4 h-4 text-muted-foreground" />
-                        </button>
-                        <button
-                          onClick={() => setDeletePlan(plan)}
-                          className="p-1.5 rounded-md hover:bg-red-50 transition-colors"
-                          title="삭제"
-                        >
-                          <Trash2 className="w-4 h-4 text-red-400" />
-                        </button>
-                      </div>
+          {/* 계획 리스트 */}
+          {plansLoading ? (
+            <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-8) 0" }}>
+              <Loader2 style={{ width: 24, height: 24, color: "var(--color-text-disabled)", animation: "spin 1s linear infinite" }} />
+            </div>
+          ) : lessonPlans.length > 0 ? (
+            <div className="gb-grid gb-grid-4">
+              {lessonPlans.map((plan) => (
+                <div
+                  key={plan.id}
+                  style={{
+                    padding: "var(--space-4)",
+                    borderRadius: "var(--radius-lg)",
+                    border: "1px solid var(--color-border-light)",
+                    transition: "all var(--transition-short)",
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "var(--color-bg-secondary)"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                >
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "var(--space-3)" }}>
+                    <div style={{ flex: 1 }}>
+                      <h4 style={{ fontSize: "var(--text-base)", fontWeight: "var(--weight-semibold)", color: "var(--color-text)" }}>{plan.title}</h4>
+                      {plan.description && (
+                        <p style={{ fontSize: "var(--text-sm)", color: "var(--color-text-secondary)", marginTop: "var(--space-2)" }}>
+                          {plan.description}
+                        </p>
+                      )}
+                      {plan.scheduledDate && (
+                        <p style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)", marginTop: "var(--space-2)" }}>
+                          <Calendar style={{ width: 12, height: 12 }} />
+                          {plan.scheduledDate.split("T")[0]}
+                        </p>
+                      )}
                     </div>
-
-                    {/* 진도바 */}
-                    <div className="mt-3">
-                      <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="text-muted-foreground">진도율</span>
-                        <span className="font-semibold">{plan.progress || 0}%</span>
-                      </div>
-                      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-blue-400 to-blue-600 rounded-full transition-all"
-                          style={{ width: `${plan.progress || 0}%` }}
-                        />
-                      </div>
+                    <div className="gb-row gb-row-1">
+                      <button
+                        onClick={() => openEdit(plan)}
+                        style={{ padding: "var(--space-1)", borderRadius: "var(--radius-sm)", color: "var(--color-text-secondary)", background: "transparent", border: "none", cursor: "pointer" }}
+                        title="수정"
+                      >
+                        <Pencil style={{ width: 16, height: 16 }} />
+                      </button>
+                      <button
+                        onClick={() => setDeletePlan(plan)}
+                        style={{ padding: "var(--space-1)", borderRadius: "var(--radius-sm)", color: "var(--color-error)", background: "transparent", border: "none", cursor: "pointer" }}
+                        title="삭제"
+                      >
+                        <Trash2 style={{ width: 16, height: 16 }} />
+                      </button>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center text-sm text-muted-foreground py-8">
-                등록된 수업 계획이 없습니다. "새 계획 추가" 버튼으로 시작하세요.
-              </div>
-            )}
-          </CardContent>
-        </Card>
+
+                  {/* 진도바 */}
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "var(--text-xs)", marginBottom: "var(--space-1)" }}>
+                      <span style={{ color: "var(--color-text-tertiary)" }}>진도율</span>
+                      <span style={{ fontWeight: "var(--weight-semibold)", color: "var(--color-text)" }}>{plan.progress || 0}%</span>
+                    </div>
+                    <div style={{ height: "8px", background: "var(--color-bg-secondary)", borderRadius: "var(--radius-full)", overflow: "hidden" }}>
+                      <div
+                        style={{ height: "100%", background: "linear-gradient(to right, #60a5fa, #2563eb)", borderRadius: "var(--radius-full)", transition: "width var(--transition-normal)", width: `${plan.progress || 0}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="gb-empty-state" style={{ padding: "var(--space-8) 0" }}>
+              등록된 수업 계획이 없습니다. &quot;새 계획 추가&quot; 버튼으로 시작하세요.
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 수정 다이얼로그 */}
-      <Dialog open={!!editPlan} onOpenChange={(o) => !o && setEditPlan(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>수업 계획 수정</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <label className="block text-sm font-medium mb-1">제목</label>
-              <Input
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-              />
+      {editPlan && (
+        <div className="gb-modal-overlay">
+          <div className="gb-modal">
+            <div className="gb-row" style={{ justifyContent: "space-between", marginBottom: "var(--space-6)" }}>
+              <h2 className="gb-modal-title" style={{ marginBottom: 0 }}>수업 계획 수정</h2>
+              <button className="gb-header-icon-btn" onClick={() => setEditPlan(null)}>
+                <X style={{ width: 16, height: 16 }} />
+              </button>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">설명</label>
-              <textarea
-                value={editDesc}
-                onChange={(e) => setEditDesc(e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 rounded-md border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">예정일</label>
-              <Input
-                type="date"
-                value={editDate}
-                onChange={(e) => setEditDate(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                진도율: {editProgress}%
-              </label>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={editProgress}
-                onChange={(e) => setEditProgress(Number(e.target.value))}
-                className="w-full accent-primary"
-              />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>0%</span>
-                <span>50%</span>
-                <span>100%</span>
+            
+            <div className="gb-stack gb-stack-4">
+              <div>
+                <label className="gb-input-label">제목</label>
+                <input
+                  className="gb-input"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="gb-input-label">설명</label>
+                <textarea
+                  className="gb-input"
+                  value={editDesc}
+                  onChange={(e) => setEditDesc(e.target.value)}
+                  rows={3}
+                  style={{ resize: "none" }}
+                />
+              </div>
+              <div>
+                <label className="gb-input-label">예정일</label>
+                <input
+                  type="date"
+                  className="gb-input"
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="gb-input-label">
+                  진도율: {editProgress}%
+                </label>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={editProgress}
+                  onChange={(e) => setEditProgress(Number(e.target.value))}
+                  style={{ width: "100%", accentColor: "var(--color-primary)", display: "block", marginBottom: "var(--space-2)" }}
+                />
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)" }}>
+                  <span>0%</span>
+                  <span>50%</span>
+                  <span>100%</span>
+                </div>
               </div>
             </div>
+            
+            <div className="gb-modal-actions" style={{ marginTop: "var(--space-6)" }}>
+              <button className="gb-btn gb-btn-secondary" onClick={() => setEditPlan(null)}>취소</button>
+              <button
+                className="gb-btn gb-btn-primary"
+                onClick={handleUpdate}
+                disabled={saving}
+              >
+                {saving ? <Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} /> : null}
+                저장
+              </button>
+            </div>
           </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">취소</Button>
-            </DialogClose>
-            <Button onClick={handleUpdate} disabled={saving}>
-              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              저장
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
 
       {/* 삭제 확인 다이얼로그 */}
-      <Dialog open={!!deletePlan} onOpenChange={(o) => !o && setDeletePlan(null)}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>수업 계획 삭제</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground py-2">
-            &ldquo;{deletePlan?.title}&rdquo;을(를) 정말 삭제하시겠습니까?
-            <br />이 작업은 되돌릴 수 없습니다.
-          </p>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">취소</Button>
-            </DialogClose>
-            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-              {deleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              삭제
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {deletePlan && (
+        <div className="gb-modal-overlay">
+          <div className="gb-modal" style={{ maxWidth: '400px' }}>
+            <div className="gb-row" style={{ justifyContent: "space-between", marginBottom: "var(--space-4)" }}>
+              <h2 className="gb-modal-title" style={{ marginBottom: 0 }}>수업 계획 삭제</h2>
+              <button className="gb-header-icon-btn" onClick={() => setDeletePlan(null)}>
+                <X style={{ width: 16, height: 16 }} />
+              </button>
+            </div>
+            
+            <p style={{ fontSize: "var(--text-sm)", color: "var(--color-text-secondary)", marginBottom: "var(--space-6)" }}>
+              &quot;{deletePlan?.title}&quot;을(를) 정말 삭제하시겠습니까?<br />
+              <span style={{ color: "var(--color-error)" }}>이 작업은 되돌릴 수 없습니다.</span>
+            </p>
+            
+            <div className="gb-modal-actions">
+              <button className="gb-btn gb-btn-secondary" onClick={() => setDeletePlan(null)}>취소</button>
+              <button
+                className="gb-btn"
+                style={{ background: "var(--color-error)", color: "white", border: "none" }}
+                onClick={handleDelete}
+                disabled={deleting}
+              >
+                {deleting ? <Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} /> : null}
+                삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,19 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Header } from "@/components/layout/header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
 import {
   Plus,
   FileText,
@@ -43,6 +30,9 @@ export default function ExamManagementPage() {
   const [classes, setClasses] = useState<ArenaClass[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [loading, setLoading] = useState(true);
+
+  // 현재 탭 상태
+  const [activeTab, setActiveTab] = useState("create"); // "create", "grade", "results"
 
   // 시험 생성
   const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>([]);
@@ -201,242 +191,248 @@ export default function ExamManagementPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col">
-        <Header title="시험 관리" />
-        <div className="flex-1 flex items-center justify-center p-6">
-          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      <div className="gb-page-dashboard gb-stack gb-stack-6" style={{ paddingTop: "var(--space-10)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "300px" }}>
+          <Loader2 style={{ width: 32, height: 32, color: "var(--color-text-disabled)", animation: "spin 1s linear infinite" }} />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col">
-      <Header title="시험 관리" />
+    <div className="gb-page-dashboard gb-stack gb-stack-8" style={{ paddingTop: "var(--space-10)" }}>
+      {/* 페이지 헤더 */}
+      <div className="gb-page-header" style={{ marginBottom: 0 }}>
+        <h1 className="gb-page-title">시험 관리</h1>
+        <p className="gb-page-desc">
+          수업에 포함되는 시험을 생성하고 성적을 입력/조회하세요
+        </p>
+      </div>
 
-      <div className="flex-1 p-6 space-y-6">
+      <div className="gb-stack gb-stack-6">
         {/* 클래스 선택 */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex gap-2 flex-wrap items-center">
-              <span className="text-sm font-medium text-muted-foreground mr-2">
-                클래스
-              </span>
-              {classes.map((cls) => (
-                <button
-                  key={cls.id}
-                  onClick={() => setSelectedClassId(String(cls.id))}
-                  className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${String(cls.id) === selectedClassId
-                      ? "bg-primary text-primary-foreground shadow-md"
-                      : "bg-muted hover:bg-muted/80"
-                    }`}
-                >
-                  {cls.name}
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="gb-card">
+          <div style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)", color: "var(--color-text-tertiary)", marginBottom: "var(--space-3)" }}>
+            클래스 선택
+          </div>
+          <div className="gb-row gb-row-3" style={{ flexWrap: "wrap" }}>
+            {classes.map((cls) => (
+              <button
+                key={cls.id}
+                onClick={() => setSelectedClassId(String(cls.id))}
+                className={`gb-btn ${String(cls.id) === selectedClassId ? 'gb-btn-primary' : 'gb-btn-outline'}`}
+              >
+                {cls.name}
+              </button>
+            ))}
+            {classes.length === 0 && (
+              <span className="gb-page-desc">클래스가 없습니다.</span>
+            )}
+          </div>
+        </div>
 
-        {/* 탭 */}
-        <Tabs defaultValue="create" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="create">
-              <Plus className="w-4 h-4 mr-2" />
-              시험 생성
-            </TabsTrigger>
-            <TabsTrigger value="grade">
-              <FileText className="w-4 h-4 mr-2" />
-              성적 입력
-            </TabsTrigger>
-            <TabsTrigger value="results">
-              <BarChart3 className="w-4 h-4 mr-2" />
-              결과 조회
-            </TabsTrigger>
-          </TabsList>
+        {/* 탭 헤더 */}
+        <div style={{ display: "flex", gap: "var(--space-6)", borderBottom: "1px solid var(--color-border-light)" }}>
+          {[
+            { id: "create", icon: Plus, label: "시험 생성" },
+            { id: "grade", icon: FileText, label: "성적 입력" },
+            { id: "results", icon: BarChart3, label: "결과 조회" },
+          ].map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  display: "flex", alignItems: "center", gap: "8px",
+                  padding: "var(--space-3) 0",
+                  fontSize: "var(--text-sm)",
+                  fontWeight: isActive ? "var(--weight-semibold)" : "var(--weight-medium)",
+                  color: isActive ? "var(--color-primary)" : "var(--color-text-tertiary)",
+                  borderBottom: isActive ? "2px solid var(--color-primary)" : "2px solid transparent",
+                  background: "none", borderTop: "none", borderLeft: "none", borderRight: "none",
+                  cursor: "pointer", transition: "all var(--transition-short)"
+                }}
+              >
+                <Icon style={{ width: 16, height: 16 }} />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
 
-          {/* 시험 생성 */}
-          <TabsContent value="create" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Plus className="w-5 h-5" />
-                  새 시험 만들기
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {created && (
-                  <div className="mb-4 p-3 rounded-lg bg-green-50 text-green-700 flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="w-4 h-4" />
-                    시험이 생성되었습니다!
-                  </div>
-                )}
-                <div className="space-y-4 max-w-lg">
-                  {/* 수업 계획 선택 */}
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      연결할 수업 계획
-                    </label>
-                    {plansLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <select
-                        value={selectedLessonId}
-                        onChange={(e) => setSelectedLessonId(e.target.value)}
-                        className="w-full px-3 py-2 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                      >
-                        <option value="">수업 계획을 선택하세요</option>
-                        {lessonPlans.map((plan) => (
-                          <option key={plan.id} value={plan.id}>
-                            {plan.title}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-
-                  {/* 시험 제목 */}
-                  <div>
-                    <label className="block text-sm font-medium mb-1">시험 제목 *</label>
-                    <Input
-                      placeholder="예: 1차 중간고사"
-                      value={testTitle}
-                      onChange={(e) => setTestTitle(e.target.value)}
-                    />
-                  </div>
-
-                  {/* 설명 */}
-                  <div>
-                    <label className="block text-sm font-medium mb-1">설명</label>
-                    <textarea
-                      placeholder="시험에 대한 설명 (선택사항)"
-                      value={testDesc}
-                      onChange={(e) => setTestDesc(e.target.value)}
-                      rows={2}
-                      className="w-full px-3 py-2 rounded-md border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* 시험일 */}
-                    <div>
-                      <label className="block text-sm font-medium mb-1">시험일</label>
-                      <Input
-                        type="date"
-                        value={testDate}
-                        onChange={(e) => setTestDate(e.target.value)}
-                      />
-                    </div>
-                    {/* 만점 */}
-                    <div>
-                      <label className="block text-sm font-medium mb-1">만점</label>
-                      <Input
-                        type="number"
-                        value={maxScore}
-                        onChange={(e) => setMaxScore(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <Button
-                    onClick={handleCreateTest}
-                    disabled={creating || !testTitle.trim() || !selectedLessonId}
-                    className="w-full"
+        {/* 시험 생성 */}
+        {activeTab === "create" && (
+          <div className="gb-card">
+            <h2 className="gb-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Plus style={{ width: 18, height: 18, color: 'var(--color-primary)' }}/>
+              새 시험 만들기
+            </h2>
+            <div className="gb-stack gb-stack-4" style={{ maxWidth: '600px' }}>
+              {created && (
+                <div style={{ padding: "var(--space-3)", borderRadius: "var(--radius-md)", background: "var(--color-success-10)", display: "flex", alignItems: "center", gap: "8px", color: "var(--color-success)", fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)" }}>
+                  <CheckCircle2 style={{ width: 16, height: 16 }} />
+                  시험이 생성되었습니다!
+                </div>
+              )}
+              
+              <div>
+                <label className="gb-input-label">
+                  연결할 수업 계획
+                </label>
+                {plansLoading ? (
+                  <Loader2 style={{ width: 16, height: 16, color: "var(--color-text-disabled)", animation: "spin 1s linear infinite" }} />
+                ) : (
+                  <select
+                    value={selectedLessonId}
+                    onChange={(e) => setSelectedLessonId(e.target.value)}
+                    className="gb-input"
                   >
-                    {creating ? (
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    ) : (
-                      <Plus className="w-4 h-4 mr-2" />
-                    )}
-                    시험 생성
-                  </Button>
-                </div>
-
-                {/* 생성된 시험 목록 */}
-                {createdTests.length > 0 && (
-                  <div className="mt-6 space-y-2">
-                    <h4 className="text-sm font-medium text-muted-foreground">
-                      이번 세션에서 생성한 시험
-                    </h4>
-                    {createdTests.map((t, i) => (
-                      <div
-                        key={i}
-                        className="p-3 rounded-lg border bg-accent/30 text-sm flex items-center gap-2"
-                      >
-                        <FileText className="w-4 h-4 text-primary" />
-                        {t.title || t.id}
-                      </div>
+                    <option value="">수업 계획을 선택하세요</option>
+                    {lessonPlans.map((plan) => (
+                      <option key={plan.id} value={plan.id}>
+                        {plan.title}
+                      </option>
                     ))}
-                  </div>
+                  </select>
                 )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </div>
 
-          {/* 성적 입력 */}
-          <TabsContent value="grade" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="w-5 h-5" />
-                    성적 일괄 입력
-                  </CardTitle>
-                  <div className="flex gap-2">
-                    <select
-                      value={selectedTestId}
-                      onChange={(e) => setSelectedTestId(e.target.value)}
-                      className="px-3 py-2 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    >
-                      <option value="">시험 선택</option>
-                      {createdTests.map((t, i) => (
-                        <option key={i} value={t.id}>
-                          {t.title || `시험 ${i + 1}`}
-                        </option>
-                      ))}
-                    </select>
-                    <Button
-                      onClick={handleBulkScore}
-                      disabled={scoreSaving || !selectedTestId}
-                    >
-                      {scoreSaving ? (
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      ) : (
-                        <Save className="w-4 h-4 mr-2" />
-                      )}
-                      저장
-                    </Button>
-                  </div>
+              <div>
+                <label className="gb-input-label">시험 제목 <span style={{ color: "var(--color-error)" }}>*</span></label>
+                <input
+                  type="text"
+                  className="gb-input"
+                  placeholder="예: 1차 중간고사"
+                  value={testTitle}
+                  onChange={(e) => setTestTitle(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="gb-input-label">설명</label>
+                <textarea
+                  placeholder="시험에 대한 설명 (선택사항)"
+                  value={testDesc}
+                  onChange={(e) => setTestDesc(e.target.value)}
+                  rows={2}
+                  className="gb-input"
+                  style={{ resize: "none" }}
+                />
+              </div>
+
+              <div className="gb-row gb-row-4">
+                <div style={{ flex: 1 }}>
+                  <label className="gb-input-label">시험일</label>
+                  <input
+                    type="date"
+                    className="gb-input"
+                    value={testDate}
+                    onChange={(e) => setTestDate(e.target.value)}
+                  />
                 </div>
-              </CardHeader>
-              <CardContent>
-                {scoreSaved && (
-                  <div className="mb-4 p-3 rounded-lg bg-green-50 text-green-700 flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="w-4 h-4" />
-                    성적이 저장되었습니다!
-                  </div>
-                )}
+                <div style={{ flex: 1 }}>
+                  <label className="gb-input-label">만점</label>
+                  <input
+                    type="number"
+                    className="gb-input"
+                    value={maxScore}
+                    onChange={(e) => setMaxScore(e.target.value)}
+                  />
+                </div>
+              </div>
 
-                {studentsLoading ? (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              <button
+                className="gb-btn gb-btn-primary"
+                style={{ width: "100%", justifyContent: "center" }}
+                onClick={handleCreateTest}
+                disabled={creating || !testTitle.trim() || !selectedLessonId}
+              >
+                {creating ? <Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} /> : <Plus style={{ width: 16, height: 16 }} />}
+                시험 생성
+              </button>
+            </div>
+
+            {/* 생성된 시험 목록 */}
+            {createdTests.length > 0 && (
+              <div className="gb-stack gb-stack-2" style={{ marginTop: "var(--space-8)" }}>
+                <h4 style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)", color: "var(--color-text-tertiary)" }}>
+                  이번 세션에서 생성한 시험
+                </h4>
+                {createdTests.map((t, i) => (
+                  <div key={i} className="gb-row gb-row-2" style={{ padding: "var(--space-3)", borderRadius: "var(--radius-md)", background: "var(--color-primary-50, var(--color-bg-secondary))", border: "1px solid var(--color-border-light)", fontSize: "var(--text-sm)" }}>
+                    <FileText style={{ width: 16, height: 16, color: "var(--color-primary)" }} />
+                    {t.title || t.id}
                   </div>
-                ) : students.length > 0 ? (
-                  <div className="space-y-2">
-                    <div className="grid grid-cols-3 gap-4 px-4 py-2 text-sm font-medium text-muted-foreground border-b">
-                      <div>학생</div>
-                      <div>점수</div>
-                      <div>진행상태</div>
-                    </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 성적 입력 */}
+        {activeTab === "grade" && (
+          <div className="gb-card">
+            <div className="gb-row gb-row-4" style={{ justifyContent: "space-between", marginBottom: "var(--space-6)" }}>
+              <h2 className="gb-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 0 }}>
+                <FileText style={{ width: 18, height: 18, color: 'var(--color-primary)' }}/>
+                성적 일괄 입력
+              </h2>
+              <div className="gb-row gb-row-3">
+                <select
+                  value={selectedTestId}
+                  onChange={(e) => setSelectedTestId(e.target.value)}
+                  className="gb-input"
+                  style={{ width: "200px" }}
+                >
+                  <option value="">시험 선택</option>
+                  {createdTests.map((t, i) => (
+                    <option key={i} value={t.id}>
+                      {t.title || `시험 ${i + 1}`}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  className="gb-btn gb-btn-primary"
+                  onClick={handleBulkScore}
+                  disabled={scoreSaving || !selectedTestId}
+                >
+                  {scoreSaving ? <Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} /> : <Save style={{ width: 16, height: 16 }} />}
+                  저장
+                </button>
+              </div>
+            </div>
+
+            {scoreSaved && (
+              <div style={{ marginBottom: "var(--space-4)", padding: "var(--space-3)", borderRadius: "var(--radius-md)", background: "var(--color-success-10)", display: "flex", alignItems: "center", gap: "8px", color: "var(--color-success)", fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)" }}>
+                <CheckCircle2 style={{ width: 16, height: 16 }} />
+                성적이 저장되었습니다!
+              </div>
+            )}
+
+            {studentsLoading ? (
+              <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-8) 0" }}>
+                <Loader2 style={{ width: 24, height: 24, color: "var(--color-text-disabled)", animation: "spin 1s linear infinite" }} />
+              </div>
+            ) : students.length > 0 ? (
+              <div>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid var(--color-border-light)" }}>
+                      <th style={{ textAlign: "left", padding: "var(--space-3)", fontWeight: "var(--weight-semibold)", width: "30%" }}>학생</th>
+                      <th style={{ textAlign: "left", padding: "var(--space-3)", fontWeight: "var(--weight-semibold)", width: "30%" }}>점수</th>
+                      <th style={{ textAlign: "right", padding: "var(--space-3)", fontWeight: "var(--weight-semibold)", width: "40%" }}>상태</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                     {students.map((student) => (
-                      <div
-                        key={student.id}
-                        className="grid grid-cols-3 gap-4 items-center px-4 py-3 rounded-lg hover:bg-accent/30"
-                      >
-                        <div className="font-medium">{student.name}</div>
-                        <div>
-                          <Input
+                      <tr key={student.id} style={{ borderBottom: "1px solid var(--color-border-light)" }}>
+                        <td style={{ padding: "var(--space-3)", fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)" }}>{student.name}</td>
+                        <td style={{ padding: "var(--space-3)" }}>
+                          <input
                             type="number"
+                            className="gb-input"
                             placeholder="점수"
                             value={scores[student.id] || ""}
                             onChange={(e) =>
@@ -445,180 +441,177 @@ export default function ExamManagementPage() {
                                 [student.id]: e.target.value,
                               }))
                             }
-                            className="w-24"
+                            style={{ width: "100px", height: "32px" }}
                             min={0}
                             max={Number(maxScore) || 100}
                           />
-                        </div>
-                        <div>
+                        </td>
+                        <td style={{ padding: "var(--space-3)", textAlign: "right", fontSize: "var(--text-sm)" }}>
                           {scores[student.id] ? (
-                            <span className="text-xs text-green-600 flex items-center gap-1">
-                              <CheckCircle2 className="w-3 h-3" />
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "var(--color-success)", fontWeight: "var(--weight-medium)" }}>
+                              <CheckCircle2 style={{ width: 14, height: 14 }} />
                               입력됨
                             </span>
                           ) : (
-                            <span className="text-xs text-muted-foreground">
+                            <span style={{ color: "var(--color-text-disabled)" }}>
                               미입력
                             </span>
                           )}
-                        </div>
-                      </div>
+                        </td>
+                      </tr>
                     ))}
-                  </div>
-                ) : (
-                  <div className="text-center text-sm text-muted-foreground py-8">
-                    학생이 없습니다
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="gb-empty-state" style={{ padding: "var(--space-8) 0" }}>
+                학생이 없습니다
+              </div>
+            )}
+          </div>
+        )}
 
-          {/* 결과 조회 */}
-          <TabsContent value="results" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5" />
-                    시험 결과
-                  </CardTitle>
-                  <div className="flex gap-2">
-                    <select
-                      value={selectedTestId}
-                      onChange={(e) => {
-                        setSelectedTestId(e.target.value);
-                        if (e.target.value) fetchResults(e.target.value);
-                      }}
-                      className="px-3 py-2 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    >
-                      <option value="">시험 선택</option>
-                      {createdTests.map((t, i) => (
-                        <option key={i} value={t.id}>
-                          {t.title || `시험 ${i + 1}`}
-                        </option>
-                      ))}
-                    </select>
+        {/* 결과 조회 */}
+        {activeTab === "results" && (
+          <div className="gb-card">
+            <div className="gb-row gb-row-4" style={{ justifyContent: "space-between", marginBottom: "var(--space-6)" }}>
+              <h2 className="gb-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 0 }}>
+                <BarChart3 style={{ width: 18, height: 18, color: 'var(--color-primary)' }}/>
+                시험 결과
+              </h2>
+              <div className="gb-row gb-row-3">
+                <select
+                  value={selectedTestId}
+                  onChange={(e) => {
+                    setSelectedTestId(e.target.value);
+                    if (e.target.value) fetchResults(e.target.value);
+                  }}
+                  className="gb-input"
+                  style={{ width: "200px" }}
+                >
+                  <option value="">시험 선택</option>
+                  {createdTests.map((t, i) => (
+                    <option key={i} value={t.id}>
+                      {t.title || `시험 ${i + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* 통계 카드 */}
+            {resultStats && (
+              <div className="gb-grid gb-grid-3" style={{ marginBottom: "var(--space-6)" }}>
+                <div style={{ background: "var(--color-primary-50, var(--color-bg-secondary))", padding: "var(--space-4)", borderRadius: "var(--radius-lg)", textAlign: "center" }}>
+                  <div style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--weight-bold)", color: "var(--color-primary)" }}>
+                    {resultStats.avg}점
                   </div>
+                  <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)", marginTop: "var(--space-1)" }}>평균</div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                {/* 통계 카드 */}
-                {resultStats && (
-                  <div className="grid grid-cols-3 gap-4 mb-6">
-                    <div className="p-4 rounded-lg bg-blue-50 text-center">
-                      <p className="text-2xl font-bold text-blue-600">
-                        {resultStats.avg}점
-                      </p>
-                      <p className="text-xs text-muted-foreground">평균</p>
-                    </div>
-                    <div className="p-4 rounded-lg bg-green-50 text-center">
-                      <p className="text-2xl font-bold text-green-600">
-                        {resultStats.max}점
-                      </p>
-                      <p className="text-xs text-muted-foreground">최고점</p>
-                    </div>
-                    <div className="p-4 rounded-lg bg-orange-50 text-center">
-                      <p className="text-2xl font-bold text-orange-600">
-                        {resultStats.min}점
-                      </p>
-                      <p className="text-xs text-muted-foreground">최저점</p>
-                    </div>
+                <div style={{ background: "var(--color-success-10)", padding: "var(--space-4)", borderRadius: "var(--radius-lg)", textAlign: "center" }}>
+                  <div style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--weight-bold)", color: "var(--color-success)" }}>
+                    {resultStats.max}점
                   </div>
-                )}
+                  <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)", marginTop: "var(--space-1)" }}>최고점</div>
+                </div>
+                <div style={{ background: "var(--color-error-10)", padding: "var(--space-4)", borderRadius: "var(--radius-lg)", textAlign: "center" }}>
+                  <div style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--weight-bold)", color: "var(--color-error)" }}>
+                    {resultStats.min}점
+                  </div>
+                  <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)", marginTop: "var(--space-1)" }}>최저점</div>
+                </div>
+              </div>
+            )}
 
-                {/* 성적 분포 바 */}
-                {testResults.length > 0 && (
-                  <div className="mb-6 space-y-2">
-                    <p className="text-sm font-medium">성적 분포</p>
-                    <div className="space-y-1">
-                      {[
-                        { label: "90+", color: "bg-green-500" },
-                        { label: "80-89", color: "bg-blue-500" },
-                        { label: "70-79", color: "bg-yellow-500" },
-                        { label: "60-69", color: "bg-orange-500" },
-                        { label: "60미만", color: "bg-red-500" },
-                      ].map(({ label, color }) => {
-                        const count = testResults.filter((r) => {
-                          if (label === "90+") return r.score >= 90;
-                          if (label === "80-89")
-                            return r.score >= 80 && r.score < 90;
-                          if (label === "70-79")
-                            return r.score >= 70 && r.score < 80;
-                          if (label === "60-69")
-                            return r.score >= 60 && r.score < 70;
-                          return r.score < 60;
-                        }).length;
-                        const percent = Math.round(
-                          (count / testResults.length) * 100
-                        );
-                        return (
-                          <div key={label} className="flex items-center gap-2">
-                            <span className="text-xs w-12 text-right text-muted-foreground">
-                              {label}
-                            </span>
-                            <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full ${color} rounded-full transition-all`}
-                                style={{ width: `${percent}%` }}
-                              />
-                            </div>
-                            <span className="text-xs w-8 text-muted-foreground">
-                              {count}명
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+            {/* 성적 분포 바 */}
+            {testResults.length > 0 && (
+              <div style={{ marginBottom: "var(--space-6)" }}>
+                <div style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)", marginBottom: "var(--space-3)" }}>성적 분포</div>
+                <div className="gb-stack gb-stack-2">
+                  {[
+                    { label: "90+", color: "var(--color-success)" },
+                    { label: "80-89", color: "var(--color-primary)" },
+                    { label: "70-79", color: "var(--color-warning)" },
+                    { label: "60-69", color: "var(--color-warning)" },
+                    { label: "60미만", color: "var(--color-error)" },
+                  ].map(({ label, color }) => {
+                    const count = testResults.filter((r) => {
+                      if (label === "90+") return r.score >= 90;
+                      if (label === "80-89")
+                        return r.score >= 80 && r.score < 90;
+                      if (label === "70-79")
+                        return r.score >= 70 && r.score < 80;
+                      if (label === "60-69")
+                        return r.score >= 60 && r.score < 70;
+                      return r.score < 60;
+                    }).length;
+                    const percent = Math.round(
+                      (count / testResults.length) * 100
+                    );
+                    return (
+                      <div key={label} className="gb-row gb-row-3">
+                        <span style={{ fontSize: "var(--text-xs)", width: "48px", textAlign: "right", color: "var(--color-text-tertiary)" }}>
+                          {label}
+                        </span>
+                        <div style={{ flex: 1, height: "16px", background: "var(--color-border-light)", borderRadius: "var(--radius-full)", overflow: "hidden" }}>
+                          <div
+                            style={{ height: "100%", background: color, borderRadius: "var(--radius-full)", transition: "all var(--transition-normal)", width: `${percent}%` }}
+                          />
+                        </div>
+                        <span style={{ fontSize: "var(--text-xs)", width: "32px", color: "var(--color-text-tertiary)" }}>
+                          {count}명
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
-                {/* 학생별 결과 테이블 */}
-                {resultsLoading ? (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : testResults.length > 0 ? (
-                  <div className="space-y-2">
-                    <div className="grid grid-cols-3 gap-4 px-4 py-2 text-sm font-medium text-muted-foreground border-b">
-                      <div>학생</div>
-                      <div>점수</div>
-                      <div>등급</div>
-                    </div>
+            {/* 학생별 결과 테이블 */}
+            {resultsLoading ? (
+              <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-8) 0" }}>
+                <Loader2 style={{ width: 24, height: 24, color: "var(--color-text-disabled)", animation: "spin 1s linear infinite" }} />
+              </div>
+            ) : testResults.length > 0 ? (
+              <div>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid var(--color-border-light)" }}>
+                      <th style={{ textAlign: "left", padding: "var(--space-3)", fontWeight: "var(--weight-semibold)", width: "40%" }}>학생</th>
+                      <th style={{ textAlign: "left", padding: "var(--space-3)", fontWeight: "var(--weight-semibold)", width: "30%" }}>점수</th>
+                      <th style={{ textAlign: "right", padding: "var(--space-3)", fontWeight: "var(--weight-semibold)", width: "30%" }}>등급</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                     {testResults
                       .sort((a, b) => b.score - a.score)
                       .map((result, idx) => (
-                        <div
-                          key={result.studentId}
-                          className="grid grid-cols-3 gap-4 items-center px-4 py-3 rounded-lg hover:bg-accent/30"
-                        >
-                          <div className="flex items-center gap-2">
-                            {idx < 3 && (
-                              <Award
-                                className={`w-4 h-4 ${idx === 0
-                                    ? "text-yellow-500"
-                                    : idx === 1
-                                      ? "text-gray-400"
-                                      : "text-orange-400"
-                                  }`}
-                              />
-                            )}
-                            <span className="font-medium">
-                              {result.studentName || result.studentId}
-                            </span>
-                          </div>
-                          <div className="font-semibold">{result.score}점</div>
-                          <div>
+                        <tr key={result.studentId} style={{ borderBottom: "1px solid var(--color-border-light)" }}>
+                          <td style={{ padding: "var(--space-3)" }}>
+                            <div className="gb-row gb-row-2">
+                              {idx < 3 && (
+                                <Award
+                                  style={{ width: 16, height: 16, color: idx === 0 ? "var(--color-warning)" : idx === 1 ? "var(--color-border)" : "var(--color-error)" }}
+                                />
+                              )}
+                              <span style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)" }}>
+                                {result.studentName || result.studentId}
+                              </span>
+                            </div>
+                          </td>
+                          <td style={{ padding: "var(--space-3)", fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)" }}>
+                            {result.score}점
+                          </td>
+                          <td style={{ padding: "var(--space-3)", textAlign: "right" }}>
                             <span
-                              className={`px-2 py-0.5 rounded-full text-xs font-semibold ${result.score >= 90
-                                  ? "bg-green-100 text-green-700"
+                              className={`gb-badge ${result.score >= 90
+                                  ? "gb-badge-success"
                                   : result.score >= 80
-                                    ? "bg-blue-100 text-blue-700"
+                                    ? "gb-badge-primary"
                                     : result.score >= 70
-                                      ? "bg-yellow-100 text-yellow-700"
-                                      : result.score >= 60
-                                        ? "bg-orange-100 text-orange-700"
-                                        : "bg-red-100 text-red-700"
+                                      ? "gb-badge-warning"
+                                      : "gb-badge-error"
                                 }`}
                             >
                               {result.score >= 90
@@ -631,21 +624,21 @@ export default function ExamManagementPage() {
                                       ? "미흡"
                                       : "부진"}
                             </span>
-                          </div>
-                        </div>
+                          </td>
+                        </tr>
                       ))}
-                  </div>
-                ) : (
-                  <div className="text-center text-sm text-muted-foreground py-8">
-                    {selectedTestId
-                      ? "시험 결과가 없습니다"
-                      : "시험을 선택하세요"}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="gb-empty-state" style={{ padding: "var(--space-8) 0" }}>
+                {selectedTestId
+                  ? "시험 결과가 없습니다"
+                  : "시험을 선택하세요"}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

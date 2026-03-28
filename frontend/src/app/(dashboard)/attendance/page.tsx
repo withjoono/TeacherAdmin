@@ -1,19 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Header } from "@/components/layout/header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-    DialogClose,
-} from "@/components/ui/dialog";
 import {
     CheckCircle2,
     Clock,
@@ -23,6 +10,7 @@ import {
     Loader2,
     Calendar,
     Save,
+    X,
 } from "lucide-react";
 import { useAttendanceStore } from "@/lib/stores/attendance-store";
 import {
@@ -71,6 +59,8 @@ export default function AttendancePage() {
     const [selectedClass, setSelectedClass] = useState("");
     const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
+
+    const [activeTab, setActiveTab] = useState("checkin"); // "checkin", "teacher", "view"
 
     // 학생 자기 체크인
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -269,475 +259,479 @@ export default function AttendancePage() {
 
     if (loading) {
         return (
-            <div className="flex flex-col">
-                <Header title="출결 관리" />
-                <div className="flex-1 flex items-center justify-center p-6">
-                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            <div className="gb-page-dashboard gb-stack gb-stack-6" style={{ paddingTop: "var(--space-10)" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "300px" }}>
+                    <Loader2 style={{ width: 32, height: 32, color: "var(--color-text-disabled)", animation: "spin 1s linear infinite" }} />
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="flex flex-col">
-            <Header title="출결 관리" />
+        <div className="gb-page-dashboard gb-stack gb-stack-8" style={{ paddingTop: "var(--space-10)" }}>
+            {/* 페이지 헤더 */}
+            <div className="gb-page-header" style={{ marginBottom: 0 }}>
+                <h1 className="gb-page-title">출결 관리</h1>
+                <p className="gb-page-desc">
+                    학생들의 출석을 확인하고 일괄 관리하세요
+                </p>
+            </div>
 
-            <div className="flex-1 p-6 space-y-6">
+            <div className="gb-stack gb-stack-6">
                 {/* 반 선택 */}
-                <Card>
-                    <CardContent className="p-4">
-                        <div className="flex gap-2 flex-wrap items-center">
-                            <span className="text-sm font-medium text-muted-foreground mr-2">
-                                반 선택
-                            </span>
-                            {classes.map((cls) => (
-                                <button
-                                    key={cls.id}
-                                    onClick={() => setSelectedClass(cls.id)}
-                                    className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${cls.id === selectedClass
-                                            ? "bg-primary text-primary-foreground shadow-md"
-                                            : "bg-muted hover:bg-muted/80"
-                                        }`}
-                                >
-                                    {cls.name}
-                                </button>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
+                <div className="gb-card">
+                    <div style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)", color: "var(--color-text-tertiary)", marginBottom: "var(--space-3)" }}>
+                        반 선택
+                    </div>
+                    <div className="gb-row gb-row-3" style={{ flexWrap: "wrap" }}>
+                        {classes.map((cls) => (
+                            <button
+                                key={cls.id}
+                                onClick={() => setSelectedClass(cls.id)}
+                                className={`gb-btn ${String(cls.id) === selectedClass ? 'gb-btn-primary' : 'gb-btn-outline'}`}
+                            >
+                                {cls.name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
 
-                {/* 탭 */}
-                <Tabs defaultValue="checkin" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="checkin">
-                            <Lock className="w-4 h-4 mr-2" />
-                            학생 출석
-                        </TabsTrigger>
-                        <TabsTrigger value="teacher">
-                            <Users className="w-4 h-4 mr-2" />
-                            일괄 관리
-                        </TabsTrigger>
-                        <TabsTrigger value="view">
-                            <Calendar className="w-4 h-4 mr-2" />
-                            출결 조회
-                        </TabsTrigger>
-                    </TabsList>
+                {/* 탭 헤더 */}
+                <div style={{ display: "flex", gap: "var(--space-6)", borderBottom: "1px solid var(--color-border-light)" }}>
+                    {[
+                        { id: "checkin", icon: Lock, label: "학생 출석" },
+                        { id: "teacher", icon: Users, label: "일괄 관리" },
+                        { id: "view", icon: Calendar, label: "출결 조회" },
+                    ].map(tab => {
+                        const Icon = tab.icon;
+                        const isActive = activeTab === tab.id;
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                style={{
+                                    display: "flex", alignItems: "center", gap: "8px",
+                                    padding: "var(--space-3) 0",
+                                    fontSize: "var(--text-sm)",
+                                    fontWeight: isActive ? "var(--weight-semibold)" : "var(--weight-medium)",
+                                    color: isActive ? "var(--color-primary)" : "var(--color-text-tertiary)",
+                                    borderBottom: isActive ? "2px solid var(--color-primary)" : "2px solid transparent",
+                                    background: "none", borderTop: "none", borderLeft: "none", borderRight: "none",
+                                    cursor: "pointer", transition: "all var(--transition-short)"
+                                }}
+                            >
+                                <Icon style={{ width: 16, height: 16 }} />
+                                {tab.label}
+                            </button>
+                        );
+                    })}
+                </div>
 
-                    {/* 학생 자기 체크인 */}
-                    <TabsContent value="checkin" className="space-y-4">
-                        <div className="flex items-center justify-between">
+                {/* 학생 자기 체크인 */}
+                {activeTab === "checkin" && (
+                    <div className="gb-stack gb-stack-4">
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
                             <div>
-                                <h2 className="text-lg font-bold flex items-center gap-2">
-                                    <Users className="w-5 h-5" />
+                                <h2 className="gb-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: "var(--space-1)" }}>
+                                    <Users style={{ width: 18, height: 18, color: 'var(--color-primary)' }}/>
                                     {selectedClassInfo?.name} 출석부
                                 </h2>
-                                <p className="text-sm text-muted-foreground">
+                                <p style={{ fontSize: "var(--text-sm)", color: "var(--color-text-tertiary)" }}>
                                     학생 이름을 눌러 출석해주세요
                                 </p>
                             </div>
-                            <div className="flex items-center gap-4 text-sm">
-                                <div className="flex items-center gap-1.5">
-                                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                    <span className="font-semibold text-green-600">
+                            <div className="gb-row gb-row-4" style={{ fontSize: "var(--text-sm)" }}>
+                                <div className="gb-row gb-row-1">
+                                    <CheckCircle2 style={{ width: 16, height: 16, color: "var(--color-success)" }} />
+                                    <span style={{ fontWeight: "var(--weight-semibold)", color: "var(--color-success)" }}>
                                         {checkedIn}
                                     </span>
-                                    <span className="text-muted-foreground">출석</span>
+                                    <span style={{ color: "var(--color-text-tertiary)" }}>출석</span>
                                 </div>
-                                <div className="flex items-center gap-1.5">
-                                    <Clock className="w-4 h-4 text-gray-400" />
-                                    <span className="font-semibold text-gray-500">
+                                <div className="gb-row gb-row-1">
+                                    <Clock style={{ width: 16, height: 16, color: "var(--color-text-disabled)" }} />
+                                    <span style={{ fontWeight: "var(--weight-semibold)", color: "var(--color-text-secondary)" }}>
                                         {total - checkedIn}
                                     </span>
-                                    <span className="text-muted-foreground">미출석</span>
+                                    <span style={{ color: "var(--color-text-tertiary)" }}>미출석</span>
                                 </div>
-                                <div className="text-muted-foreground">/ 총 {total}명</div>
+                                <div style={{ color: "var(--color-text-tertiary)" }}>/ 총 {total}명</div>
                             </div>
                         </div>
 
-                        <Card>
-                            <CardContent className="p-8">
-                                {students.length > 0 ? (
-                                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-6 justify-items-center">
-                                        {students.map((student, idx) => {
-                                            const entry = classRecords[student.id];
-                                            const isCheckedIn = entry?.status === "출석";
-                                            return (
-                                                <button
-                                                    key={student.id}
-                                                    onClick={() => handleStudentClick(student)}
-                                                    className={`group flex flex-col items-center gap-2 transition-all ${isCheckedIn
-                                                            ? "cursor-default"
-                                                            : "cursor-pointer hover:scale-105"
-                                                        }`}
-                                                >
-                                                    <div
-                                                        className={`relative w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg transition-all ${isCheckedIn
-                                                                ? "bg-gradient-to-br from-green-400 to-green-600 ring-4 ring-green-200"
-                                                                : `bg-gradient-to-br ${getCircleColor(idx)} group-hover:shadow-xl group-hover:ring-4 group-hover:ring-primary/20`
-                                                            }`}
-                                                    >
-                                                        <span className="text-center leading-tight">
-                                                            {student.name.length <= 3
-                                                                ? student.name
-                                                                : student.name.substring(0, 2)}
-                                                        </span>
-                                                        {isCheckedIn && (
-                                                            <div className="absolute -top-1 -right-1 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-md">
-                                                                <CheckCircle2 className="w-5 h-5 text-green-500" />
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <span
-                                                        className={`text-xs font-medium ${isCheckedIn
-                                                                ? "text-green-600"
-                                                                : "text-muted-foreground group-hover:text-foreground"
-                                                            }`}
-                                                    >
-                                                        {student.name}
-                                                    </span>
-                                                    {isCheckedIn && entry?.checkedInAt && (
-                                                        <span className="text-[10px] text-green-500 -mt-1">
-                                                            {entry.checkedInAt}
-                                                        </span>
-                                                    )}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                ) : (
-                                    <div className="text-center text-sm text-muted-foreground py-8">
-                                        반을 선택하면 학생 목록이 표시됩니다
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-
-                    {/* 선생님 일괄 관리 */}
-                    <TabsContent value="teacher" className="space-y-4">
-                        <Card>
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Users className="w-5 h-5" />
-                                        일괄 출결 관리
-                                    </CardTitle>
-                                    <div className="flex items-center gap-3">
-                                        <Input
-                                            type="date"
-                                            value={bulkDate}
-                                            onChange={(e) => setBulkDate(e.target.value)}
-                                            className="w-auto"
-                                        />
-                                        <Button onClick={handleBulkSave} disabled={bulkSaving}>
-                                            {bulkSaving ? (
-                                                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                                            ) : (
-                                                <Save className="w-4 h-4 mr-2" />
-                                            )}
-                                            일괄 저장
-                                        </Button>
-                                    </div>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                {bulkSaved && (
-                                    <div className="mb-4 p-3 rounded-lg bg-green-50 text-green-700 flex items-center gap-2 text-sm">
-                                        <CheckCircle2 className="w-4 h-4" />
-                                        출결이 저장되었습니다.
-                                    </div>
-                                )}
-                                {students.length > 0 ? (
-                                    <div className="space-y-2">
-                                        {/* 헤더 */}
-                                        <div className="grid grid-cols-4 gap-4 px-4 py-2 text-sm font-medium text-muted-foreground border-b">
-                                            <div>학생</div>
-                                            <div className="text-center">출석</div>
-                                            <div className="text-center">지각</div>
-                                            <div className="text-center">결석</div>
-                                        </div>
-                                        {students.map((student) => {
-                                            const sid = String(student.id);
-                                            const status = teacherStatuses[sid] || "present";
-                                            return (
-                                                <div
-                                                    key={student.id}
-                                                    className="grid grid-cols-4 gap-4 items-center px-4 py-3 rounded-lg hover:bg-accent/30 transition-colors"
-                                                >
-                                                    <div className="font-medium">{student.name}</div>
-                                                    <div className="flex justify-center">
-                                                        <button
-                                                            onClick={() =>
-                                                                setTeacherStatuses((prev) => ({
-                                                                    ...prev,
-                                                                    [sid]: "present",
-                                                                }))
-                                                            }
-                                                            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${status === "present"
-                                                                    ? "bg-green-500 text-white shadow-md ring-2 ring-green-200"
-                                                                    : "bg-gray-100 text-gray-400 hover:bg-green-50"
-                                                                }`}
-                                                        >
-                                                            <CheckCircle2 className="w-5 h-5" />
-                                                        </button>
-                                                    </div>
-                                                    <div className="flex justify-center">
-                                                        <button
-                                                            onClick={() =>
-                                                                setTeacherStatuses((prev) => ({
-                                                                    ...prev,
-                                                                    [sid]: "late",
-                                                                }))
-                                                            }
-                                                            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${status === "late"
-                                                                    ? "bg-yellow-500 text-white shadow-md ring-2 ring-yellow-200"
-                                                                    : "bg-gray-100 text-gray-400 hover:bg-yellow-50"
-                                                                }`}
-                                                        >
-                                                            <Clock className="w-5 h-5" />
-                                                        </button>
-                                                    </div>
-                                                    <div className="flex justify-center">
-                                                        <button
-                                                            onClick={() =>
-                                                                setTeacherStatuses((prev) => ({
-                                                                    ...prev,
-                                                                    [sid]: "absent",
-                                                                }))
-                                                            }
-                                                            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${status === "absent"
-                                                                    ? "bg-red-500 text-white shadow-md ring-2 ring-red-200"
-                                                                    : "bg-gray-100 text-gray-400 hover:bg-red-50"
-                                                                }`}
-                                                        >
-                                                            <XCircle className="w-5 h-5" />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                ) : (
-                                    <div className="text-center text-sm text-muted-foreground py-8">
-                                        학생이 없습니다
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-
-                    {/* 출결 조회 */}
-                    <TabsContent value="view" className="space-y-4">
-                        <Card>
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Calendar className="w-5 h-5" />
-                                        출결 조회
-                                    </CardTitle>
-                                    <Input
-                                        type="date"
-                                        value={viewDate}
-                                        onChange={(e) => setViewDate(e.target.value)}
-                                        className="w-auto"
-                                    />
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                {/* 통계 */}
-                                <div className="grid grid-cols-3 gap-4 mb-6">
-                                    <div className="p-4 rounded-lg bg-green-50 text-center">
-                                        <p className="text-2xl font-bold text-green-600">
-                                            {viewStats.present}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">출석</p>
-                                    </div>
-                                    <div className="p-4 rounded-lg bg-yellow-50 text-center">
-                                        <p className="text-2xl font-bold text-yellow-600">
-                                            {viewStats.late}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">지각</p>
-                                    </div>
-                                    <div className="p-4 rounded-lg bg-red-50 text-center">
-                                        <p className="text-2xl font-bold text-red-600">
-                                            {viewStats.absent}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">결석</p>
-                                    </div>
-                                </div>
-
-                                {/* 출결 비율 바 */}
-                                {attendanceRecords.length > 0 && (
-                                    <div className="mb-6">
-                                        <div className="h-4 rounded-full overflow-hidden flex">
-                                            {viewStats.present > 0 && (
-                                                <div
-                                                    className="bg-green-500 transition-all"
-                                                    style={{
-                                                        width: `${(viewStats.present / attendanceRecords.length) * 100}%`,
-                                                    }}
-                                                />
-                                            )}
-                                            {viewStats.late > 0 && (
-                                                <div
-                                                    className="bg-yellow-500 transition-all"
-                                                    style={{
-                                                        width: `${(viewStats.late / attendanceRecords.length) * 100}%`,
-                                                    }}
-                                                />
-                                            )}
-                                            {viewStats.absent > 0 && (
-                                                <div
-                                                    className="bg-red-500 transition-all"
-                                                    style={{
-                                                        width: `${(viewStats.absent / attendanceRecords.length) * 100}%`,
-                                                    }}
-                                                />
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* 테이블 */}
-                                {viewLoading ? (
-                                    <div className="flex justify-center py-8">
-                                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                                    </div>
-                                ) : attendanceRecords.length > 0 ? (
-                                    <div className="space-y-2">
-                                        <div className="grid grid-cols-3 gap-4 px-4 py-2 text-sm font-medium text-muted-foreground border-b">
-                                            <div>학생</div>
-                                            <div>상태</div>
-                                            <div>비고</div>
-                                        </div>
-                                        {attendanceRecords.map((record, idx) => (
-                                            <div
-                                                key={idx}
-                                                className="grid grid-cols-3 gap-4 items-center px-4 py-3 rounded-lg hover:bg-accent/30"
+                        <div className="gb-card" style={{ padding: "var(--space-8)" }}>
+                            {students.length > 0 ? (
+                                <div style={{
+                                    display: "grid",
+                                    gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))",
+                                    gap: "var(--space-6)",
+                                    justifyItems: "center"
+                                }}>
+                                    {students.map((student, idx) => {
+                                        const entry = classRecords[student.id];
+                                        const isCheckedIn = entry?.status === "출석";
+                                        return (
+                                            <button
+                                                key={student.id}
+                                                onClick={() => handleStudentClick(student)}
+                                                style={{
+                                                    display: "flex", flexDirection: "column", alignItems: "center", gap: "8px",
+                                                    background: "none", border: "none", padding: 0,
+                                                    cursor: isCheckedIn ? "default" : "pointer",
+                                                    transition: "transform var(--transition-short)"
+                                                }}
+                                                onMouseEnter={(e) => { if (!isCheckedIn) e.currentTarget.style.transform = "scale(1.05)" }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)" }}
                                             >
-                                                <div className="font-medium">
-                                                    {record.studentName}
-                                                </div>
-                                                <div>
-                                                    <span
-                                                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${record.status === "present"
-                                                                ? "bg-green-100 text-green-700"
-                                                                : record.status === "late"
-                                                                    ? "bg-yellow-100 text-yellow-700"
-                                                                    : "bg-red-100 text-red-700"
-                                                            }`}
-                                                    >
-                                                        {record.status === "present" && (
-                                                            <CheckCircle2 className="w-3 h-3" />
-                                                        )}
-                                                        {record.status === "late" && (
-                                                            <Clock className="w-3 h-3" />
-                                                        )}
-                                                        {record.status === "absent" && (
-                                                            <XCircle className="w-3 h-3" />
-                                                        )}
-                                                        {record.status === "present"
-                                                            ? "출석"
-                                                            : record.status === "late"
-                                                                ? "지각"
-                                                                : "결석"}
+                                                <div
+                                                    style={{
+                                                        position: "relative",
+                                                        width: "80px", height: "80px", borderRadius: "50%",
+                                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                                        color: "white", fontWeight: "bold", fontSize: "1.125rem",
+                                                        boxShadow: "var(--shadow-md)",
+                                                        background: isCheckedIn ? "linear-gradient(to bottom right, var(--color-success) 0%, #16a34a 100%)" : `var(--color-primary)`,
+                                                        border: isCheckedIn ? "4px solid var(--color-success-10)" : "none",
+                                                        transition: "all var(--transition-short)"
+                                                    }}
+                                                >
+                                                    <span style={{ textAlign: "center", lineHeight: 1 }}>
+                                                        {student.name.length <= 3
+                                                            ? student.name
+                                                            : student.name.substring(0, 2)}
                                                     </span>
+                                                    {isCheckedIn && (
+                                                        <div style={{
+                                                            position: "absolute", top: "-4px", right: "-4px",
+                                                            width: "28px", height: "28px", background: "white", borderRadius: "50%",
+                                                            display: "flex", alignItems: "center", justifyContent: "center",
+                                                            boxShadow: "var(--shadow-sm)"
+                                                        }}>
+                                                            <CheckCircle2 style={{ width: 20, height: 20, color: "var(--color-success)" }} />
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                <div className="text-sm text-muted-foreground">
-                                                    {record.note || "-"}
-                                                </div>
+                                                <span
+                                                    style={{
+                                                        fontSize: "var(--text-xs)", fontWeight: "var(--weight-medium)",
+                                                        color: isCheckedIn ? "var(--color-success)" : "var(--color-text-secondary)"
+                                                    }}
+                                                >
+                                                    {student.name}
+                                                </span>
+                                                {isCheckedIn && entry?.checkedInAt && (
+                                                    <span style={{ fontSize: "10px", color: "var(--color-success)", marginTop: "-4px" }}>
+                                                        {entry.checkedInAt}
+                                                    </span>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="gb-empty-state" style={{ padding: "var(--space-8) 0" }}>
+                                    반을 선택하면 학생 목록이 표시됩니다
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* 선생님 일괄 관리 */}
+                {activeTab === "teacher" && (
+                    <div className="gb-card">
+                        <div className="gb-row gb-row-4" style={{ justifyContent: "space-between", marginBottom: "var(--space-6)" }}>
+                            <h2 className="gb-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 0 }}>
+                                <Users style={{ width: 18, height: 18, color: 'var(--color-primary)' }}/>
+                                일괄 출결 관리
+                            </h2>
+                            <div className="gb-row gb-row-3">
+                                <input
+                                    type="date"
+                                    value={bulkDate}
+                                    onChange={(e) => setBulkDate(e.target.value)}
+                                    className="gb-input"
+                                    style={{ width: "auto" }}
+                                />
+                                <button
+                                    className="gb-btn gb-btn-primary"
+                                    onClick={handleBulkSave}
+                                    disabled={bulkSaving}
+                                >
+                                    {bulkSaving ? <Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} /> : <Save style={{ width: 16, height: 16 }} />}
+                                    일괄 저장
+                                </button>
+                            </div>
+                        </div>
+
+                        {bulkSaved && (
+                            <div style={{ marginBottom: "var(--space-4)", padding: "var(--space-3)", borderRadius: "var(--radius-md)", background: "var(--color-success-10)", display: "flex", alignItems: "center", gap: "8px", color: "var(--color-success)", fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)" }}>
+                                <CheckCircle2 style={{ width: 16, height: 16 }} />
+                                출결이 저장되었습니다.
+                            </div>
+                        )}
+
+                        {students.length > 0 ? (
+                            <div>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "16px", padding: "8px 16px", fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)", color: "var(--color-text-tertiary)", borderBottom: "1px solid var(--color-border-light)" }}>
+                                    <div>학생</div>
+                                    <div style={{ textAlign: "center" }}>출석</div>
+                                    <div style={{ textAlign: "center" }}>지각</div>
+                                    <div style={{ textAlign: "center" }}>결석</div>
+                                </div>
+                                {students.map((student) => {
+                                    const sid = String(student.id);
+                                    const status = teacherStatuses[sid] || "present";
+                                    return (
+                                        <div
+                                            key={student.id}
+                                            style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "16px", alignItems: "center", padding: "12px 16px", borderRadius: "var(--radius-lg)", transition: "background var(--transition-short)" }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = "var(--color-bg-secondary)"}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                                        >
+                                            <div style={{ fontWeight: "var(--weight-medium)", color: "var(--color-text)" }}>{student.name}</div>
+                                            <div style={{ display: "flex", justifyContent: "center" }}>
+                                                <button
+                                                    onClick={() =>
+                                                        setTeacherStatuses((prev) => ({
+                                                            ...prev,
+                                                            [sid]: "present",
+                                                        }))
+                                                    }
+                                                    style={{
+                                                        width: "40px", height: "40px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", transition: "all var(--transition-short)", cursor: "pointer", border: "none",
+                                                        background: status === "present" ? "var(--color-success)" : "var(--color-bg-secondary)",
+                                                        color: status === "present" ? "white" : "var(--color-text-tertiary)",
+                                                        boxShadow: status === "present" ? "var(--shadow-md)" : "none",
+                                                    }}
+                                                >
+                                                    <CheckCircle2 style={{ width: 20, height: 20 }} />
+                                                </button>
                                             </div>
+                                            <div style={{ display: "flex", justifyContent: "center" }}>
+                                                <button
+                                                    onClick={() =>
+                                                        setTeacherStatuses((prev) => ({
+                                                            ...prev,
+                                                            [sid]: "late",
+                                                        }))
+                                                    }
+                                                    style={{
+                                                        width: "40px", height: "40px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", transition: "all var(--transition-short)", cursor: "pointer", border: "none",
+                                                        background: status === "late" ? "var(--color-warning)" : "var(--color-bg-secondary)",
+                                                        color: status === "late" ? "white" : "var(--color-text-tertiary)",
+                                                        boxShadow: status === "late" ? "var(--shadow-md)" : "none",
+                                                    }}
+                                                >
+                                                    <Clock style={{ width: 20, height: 20 }} />
+                                                </button>
+                                            </div>
+                                            <div style={{ display: "flex", justifyContent: "center" }}>
+                                                <button
+                                                    onClick={() =>
+                                                        setTeacherStatuses((prev) => ({
+                                                            ...prev,
+                                                            [sid]: "absent",
+                                                        }))
+                                                    }
+                                                    style={{
+                                                        width: "40px", height: "40px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", transition: "all var(--transition-short)", cursor: "pointer", border: "none",
+                                                        background: status === "absent" ? "var(--color-error)" : "var(--color-bg-secondary)",
+                                                        color: status === "absent" ? "white" : "var(--color-text-tertiary)",
+                                                        boxShadow: status === "absent" ? "var(--shadow-md)" : "none",
+                                                    }}
+                                                >
+                                                    <XCircle style={{ width: 20, height: 20 }} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="gb-empty-state" style={{ padding: "var(--space-8) 0" }}>
+                                학생이 없습니다
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* 출결 조회 */}
+                {activeTab === "view" && (
+                    <div className="gb-card">
+                        <div className="gb-row gb-row-4" style={{ justifyContent: "space-between", marginBottom: "var(--space-6)" }}>
+                            <h2 className="gb-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 0 }}>
+                                <Calendar style={{ width: 18, height: 18, color: 'var(--color-primary)' }}/>
+                                출결 조회
+                            </h2>
+                            <input
+                                type="date"
+                                value={viewDate}
+                                onChange={(e) => setViewDate(e.target.value)}
+                                className="gb-input"
+                                style={{ width: "auto" }}
+                            />
+                        </div>
+
+                        {/* 통계 */}
+                        <div className="gb-grid gb-grid-3" style={{ marginBottom: "var(--space-6)" }}>
+                            <div style={{ background: "var(--color-success-10)", padding: "var(--space-4)", borderRadius: "var(--radius-lg)", textAlign: "center" }}>
+                                <div style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--weight-bold)", color: "var(--color-success)" }}>
+                                    {viewStats.present}
+                                </div>
+                                <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)", marginTop: "var(--space-1)" }}>출석</div>
+                            </div>
+                            <div style={{ background: "var(--color-warning-10)", padding: "var(--space-4)", borderRadius: "var(--radius-lg)", textAlign: "center" }}>
+                                <div style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--weight-bold)", color: "var(--color-warning)" }}>
+                                    {viewStats.late}
+                                </div>
+                                <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)", marginTop: "var(--space-1)" }}>지각</div>
+                            </div>
+                            <div style={{ background: "var(--color-error-10)", padding: "var(--space-4)", borderRadius: "var(--radius-lg)", textAlign: "center" }}>
+                                <div style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--weight-bold)", color: "var(--color-error)" }}>
+                                    {viewStats.absent}
+                                </div>
+                                <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)", marginTop: "var(--space-1)" }}>결석</div>
+                            </div>
+                        </div>
+
+                        {/* 비율 바 */}
+                        {attendanceRecords.length > 0 && (
+                            <div style={{ marginBottom: "var(--space-6)" }}>
+                                <div style={{ height: "16px", borderRadius: "var(--radius-full)", overflow: "hidden", display: "flex", background: "var(--color-bg-secondary)" }}>
+                                    {viewStats.present > 0 && (
+                                        <div style={{ background: "var(--color-success)", transition: "all var(--transition-normal)", width: `${(viewStats.present / attendanceRecords.length) * 100}%` }} />
+                                    )}
+                                    {viewStats.late > 0 && (
+                                        <div style={{ background: "var(--color-warning)", transition: "all var(--transition-normal)", width: `${(viewStats.late / attendanceRecords.length) * 100}%` }} />
+                                    )}
+                                    {viewStats.absent > 0 && (
+                                        <div style={{ background: "var(--color-error)", transition: "all var(--transition-normal)", width: `${(viewStats.absent / attendanceRecords.length) * 100}%` }} />
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {viewLoading ? (
+                            <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-8) 0" }}>
+                                <Loader2 style={{ width: 24, height: 24, color: "var(--color-text-disabled)", animation: "spin 1s linear infinite" }} />
+                            </div>
+                        ) : attendanceRecords.length > 0 ? (
+                            <div>
+                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                    <thead>
+                                        <tr style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid var(--color-border-light)" }}>
+                                            <th style={{ textAlign: "left", padding: "var(--space-3)", fontWeight: "var(--weight-semibold)" }}>학생</th>
+                                            <th style={{ textAlign: "left", padding: "var(--space-3)", fontWeight: "var(--weight-semibold)" }}>상태</th>
+                                            <th style={{ textAlign: "left", padding: "var(--space-3)", fontWeight: "var(--weight-semibold)" }}>비고</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {attendanceRecords.map((record, idx) => (
+                                            <tr key={idx} style={{ borderBottom: "1px solid var(--color-border-light)" }}>
+                                                <td style={{ padding: "var(--space-3)", fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)" }}>
+                                                    {record.studentName}
+                                                </td>
+                                                <td style={{ padding: "var(--space-3)" }}>
+                                                    <span className={`gb-badge ${record.status === "present" ? "gb-badge-success" : record.status === "late" ? "gb-badge-warning" : "gb-badge-error"}`}>
+                                                        {record.status === "present" && <CheckCircle2 style={{ width: 12, height: 12 }} />}
+                                                        {record.status === "late" && <Clock style={{ width: 12, height: 12 }} />}
+                                                        {record.status === "absent" && <XCircle style={{ width: 12, height: 12 }} />}
+                                                        {record.status === "present" ? "출석" : record.status === "late" ? "지각" : "결석"}
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: "var(--space-3)", fontSize: "var(--text-sm)", color: "var(--color-text-tertiary)" }}>
+                                                    {record.note || "-"}
+                                                </td>
+                                            </tr>
                                         ))}
-                                    </div>
-                                ) : (
-                                    <div className="text-center text-sm text-muted-foreground py-8">
-                                        해당 날짜의 출결 기록이 없습니다
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-                </Tabs>
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <div className="gb-empty-state" style={{ padding: "var(--space-8) 0" }}>
+                                해당 날짜의 출결 기록이 없습니다
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* 비밀번호 다이얼로그 */}
-            <Dialog
-                open={dialogOpen}
-                onOpenChange={(open) => {
-                    if (!open) {
-                        setDialogOpen(false);
-                        setSuccess(false);
-                    }
-                }}
-            >
-                <DialogContent className="sm:max-w-sm">
-                    {success ? (
-                        <div className="flex flex-col items-center py-8">
-                            <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mb-4 animate-in zoom-in-50">
-                                <CheckCircle2 className="w-10 h-10 text-green-500" />
-                            </div>
-                            <p className="text-xl font-bold text-green-600">출석 완료!</p>
-                            <p className="text-sm text-muted-foreground mt-1">
-                                {selectedStudent?.name}님, 환영합니다 👋
-                            </p>
-                        </div>
-                    ) : (
-                        <>
-                            <DialogHeader>
-                                <DialogTitle className="text-center">
-                                    <div className="flex flex-col items-center gap-3 mb-2">
-                                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                                            {selectedStudent?.name.length &&
-                                                selectedStudent.name.length <= 3
-                                                ? selectedStudent.name
-                                                : selectedStudent?.name.substring(0, 2)}
-                                        </div>
-                                        <span>{selectedStudent?.name}</span>
-                                    </div>
-                                </DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-4 py-2">
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground justify-center">
-                                    <Lock className="w-4 h-4" />
-                                    비밀번호를 입력하여 출석하세요
+            {dialogOpen && (
+                <div className="gb-modal-overlay">
+                    <div className="gb-modal" style={{ maxWidth: '400px' }}>
+                        {success ? (
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "var(--space-8) 0", animation: "bounceIn var(--transition-normal)" }}>
+                                <div style={{ width: "80px", height: "80px", borderRadius: "50%", background: "var(--color-success-10)", display: "flex", alignItems: "center", justifyItems: "center", marginBottom: "var(--space-4)" }}>
+                                    <CheckCircle2 style={{ width: 40, height: 40, color: "var(--color-success)", margin: "auto" }} />
                                 </div>
-                                <Input
-                                    type="password"
-                                    placeholder="비밀번호 입력"
-                                    value={password}
-                                    onChange={(e) => {
-                                        setPassword(e.target.value);
-                                        setError("");
-                                    }}
-                                    onKeyDown={handleKeyDown}
-                                    className="text-center text-lg tracking-widest h-12"
-                                    autoFocus
-                                />
-                                {error && (
-                                    <div className="flex items-center gap-1.5 text-sm text-red-500 justify-center">
-                                        <XCircle className="w-4 h-4" />
-                                        {error}
-                                    </div>
-                                )}
+                                <p style={{ fontSize: "var(--text-xl)", fontWeight: "var(--weight-bold)", color: "var(--color-success)" }}>출석 완료!</p>
+                                <p style={{ fontSize: "var(--text-sm)", color: "var(--color-text-tertiary)", marginTop: "var(--space-1)" }}>
+                                    {selectedStudent?.name}님, 환영합니다 👋
+                                </p>
                             </div>
-                            <DialogFooter className="sm:justify-center gap-2">
-                                <DialogClose asChild>
-                                    <Button variant="outline" className="w-24">
+                        ) : (
+                            <>
+                                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", marginBottom: "var(--space-4)" }}>
+                                    <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "var(--color-primary)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: "bold", fontSize: "1.25rem", boxShadow: "var(--shadow-md)" }}>
+                                        {selectedStudent?.name.length && selectedStudent.name.length <= 3
+                                            ? selectedStudent.name
+                                            : selectedStudent?.name.substring(0, 2)}
+                                    </div>
+                                    <h2 className="gb-modal-title" style={{ marginBottom: 0 }}>{selectedStudent?.name}</h2>
+                                </div>
+                                <div className="gb-stack gb-stack-4" style={{ padding: "var(--space-2) 0" }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "var(--text-sm)", color: "var(--color-text-tertiary)", justifyContent: "center" }}>
+                                        <Lock style={{ width: 16, height: 16 }} />
+                                        비밀번호를 입력하여 출석하세요
+                                    </div>
+                                    <input
+                                        type="password"
+                                        placeholder="비밀번호 입력"
+                                        value={password}
+                                        onChange={(e) => {
+                                            setPassword(e.target.value);
+                                            setError("");
+                                        }}
+                                        onKeyDown={handleKeyDown}
+                                        className="gb-input"
+                                        style={{ textAlign: "center", fontSize: "var(--text-lg)", letterSpacing: "0.2em", height: "48px" }}
+                                        autoFocus
+                                    />
+                                    {error && (
+                                        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "var(--text-sm)", color: "var(--color-error)", justifyContent: "center" }}>
+                                            <XCircle style={{ width: 16, height: 16 }} />
+                                            {error}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="gb-modal-actions" style={{ marginTop: "var(--space-6)", justifyContent: "center" }}>
+                                    <button
+                                        className="gb-btn gb-btn-outline"
+                                        style={{ width: "100px", justifyContent: "center" }}
+                                        onClick={() => {
+                                            setDialogOpen(false);
+                                            setSuccess(false);
+                                            setError("");
+                                        }}
+                                    >
                                         취소
-                                    </Button>
-                                </DialogClose>
-                                <Button
-                                    onClick={handlePasswordSubmit}
-                                    disabled={!password}
-                                    className="w-24"
-                                >
-                                    출석
-                                </Button>
-                            </DialogFooter>
-                        </>
-                    )}
-                </DialogContent>
-            </Dialog>
+                                    </button>
+                                    <button
+                                        onClick={handlePasswordSubmit}
+                                        disabled={!password}
+                                        className="gb-btn gb-btn-primary"
+                                        style={{ width: "100px", justifyContent: "center" }}
+                                    >
+                                        출석
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

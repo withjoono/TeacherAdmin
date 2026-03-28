@@ -1,10 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Header } from "@/components/layout/header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
     BookOpen,
     Calendar,
@@ -128,188 +124,186 @@ export default function LessonRecordsPage() {
 
     if (loading) {
         return (
-            <div className="flex flex-col">
-                <Header title="수업 기록" />
-                <div className="flex-1 flex items-center justify-center p-6">
-                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            <div className="gb-page-dashboard gb-stack gb-stack-6" style={{ paddingTop: "var(--space-10)" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "300px" }}>
+                    <Loader2 style={{ width: 32, height: 32, color: "var(--color-text-disabled)", animation: "spin 1s linear infinite" }} />
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="flex flex-col">
-            <Header title="수업 기록" />
+        <div className="gb-page-dashboard gb-stack gb-stack-8" style={{ paddingTop: "var(--space-10)" }}>
+            {/* 페이지 헤더 */}
+            <div className="gb-page-header" style={{ marginBottom: 0 }}>
+                <h1 className="gb-page-title">수업 기록</h1>
+                <p className="gb-page-desc">매 수업마다 다룬 내용과 진도를 기록하세요</p>
+            </div>
 
-            <div className="flex-1 p-6 space-y-6">
+            <div className="gb-stack gb-stack-6">
                 {/* 클래스 선택 */}
-                <Card>
-                    <CardContent className="p-4">
-                        <div className="flex gap-2 flex-wrap items-center">
-                            <span className="text-sm font-medium text-muted-foreground mr-2">
-                                클래스
-                            </span>
-                            {classes.map((cls) => (
-                                <button
-                                    key={cls.id}
-                                    onClick={() => setSelectedClassId(String(cls.id))}
-                                    className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${String(cls.id) === selectedClassId
-                                            ? "bg-primary text-primary-foreground shadow-md"
-                                            : "bg-muted hover:bg-muted/80"
-                                        }`}
-                                >
-                                    {cls.name}
-                                </button>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
+                <div className="gb-card">
+                    <div style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)", color: "var(--color-text-tertiary)", marginBottom: "var(--space-3)" }}>
+                        클래스 선택
+                    </div>
+                    <div className="gb-row gb-row-3" style={{ flexWrap: "wrap" }}>
+                        {classes.map((cls) => (
+                            <button
+                                key={cls.id}
+                                onClick={() => setSelectedClassId(String(cls.id))}
+                                className={`gb-btn ${String(cls.id) === selectedClassId ? 'gb-btn-primary' : 'gb-btn-outline'}`}
+                            >
+                                {cls.name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
 
-                <div className="grid gap-6 lg:grid-cols-3">
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "var(--space-6)", alignItems: "start" }}>
                     {/* 좌측: 수업 계획 목록 */}
-                    <Card className="lg:col-span-1">
-                        <CardHeader>
-                            <CardTitle className="text-base">수업 계획 선택</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {plansLoading ? (
-                                <div className="flex justify-center py-4">
-                                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                                </div>
-                            ) : lessonPlans.length > 0 ? (
-                                <div className="space-y-2">
-                                    {lessonPlans.map((plan) => (
-                                        <button
-                                            key={plan.id}
-                                            onClick={() => setSelectedPlanId(plan.id)}
-                                            className={`w-full text-left p-3 rounded-lg transition-all ${plan.id === selectedPlanId
-                                                    ? "bg-primary/10 border-2 border-primary/30"
-                                                    : "border hover:bg-accent/50"
-                                                }`}
-                                        >
-                                            <p className="text-sm font-medium">{plan.title}</p>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                                    <div
-                                                        className="h-full bg-blue-500 rounded-full"
-                                                        style={{ width: `${plan.progress || 0}%` }}
-                                                    />
-                                                </div>
-                                                <span className="text-xs text-muted-foreground">
-                                                    {plan.progress || 0}%
-                                                </span>
+                    <div className="gb-card" style={{ padding: "var(--space-6)" }}>
+                        <h2 className="gb-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: "var(--text-base)" }}>
+                            수업 계획 선택
+                        </h2>
+                        
+                        {plansLoading ? (
+                            <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-4) 0" }}>
+                                <Loader2 style={{ width: 20, height: 20, color: "var(--color-text-disabled)", animation: "spin 1s linear infinite" }} />
+                            </div>
+                        ) : lessonPlans.length > 0 ? (
+                            <div className="gb-stack gb-stack-2">
+                                {lessonPlans.map((plan) => (
+                                    <button
+                                        key={plan.id}
+                                        onClick={() => setSelectedPlanId(plan.id)}
+                                        style={{
+                                            width: "100%", textAlign: "left", padding: "var(--space-3)", borderRadius: "var(--radius-md)", border: "1px solid", transition: "all var(--transition-short)", cursor: "pointer",
+                                            background: plan.id === selectedPlanId ? "var(--color-primary-50, var(--color-bg-secondary))" : "transparent",
+                                            borderColor: plan.id === selectedPlanId ? "color-mix(in srgb, var(--color-primary) 30%, transparent)" : "var(--color-border-light)",
+                                        }}
+                                        onMouseEnter={(e) => { if (plan.id !== selectedPlanId) e.currentTarget.style.background = "var(--color-bg-secondary)" }}
+                                        onMouseLeave={(e) => { if (plan.id !== selectedPlanId) e.currentTarget.style.background = "transparent" }}
+                                    >
+                                        <div style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)", color: "var(--color-text)" }}>{plan.title}</div>
+                                        <div className="gb-row gb-row-2" style={{ marginTop: "var(--space-2)" }}>
+                                            <div style={{ flex: 1, height: "6px", background: "var(--color-border-light)", borderRadius: "var(--radius-full)", overflow: "hidden" }}>
+                                                <div
+                                                    style={{ height: "100%", background: "linear-gradient(to right, #60a5fa, #2563eb)", borderRadius: "var(--radius-full)", transition: "width var(--transition-normal)", width: `${plan.progress || 0}%` }}
+                                                />
                                             </div>
-                                        </button>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p className="text-sm text-muted-foreground text-center py-4">
-                                    수업 계획이 없습니다
-                                </p>
-                            )}
-                        </CardContent>
-                    </Card>
+                                            <span style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)" }}>
+                                                {plan.progress || 0}%
+                                            </span>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="gb-empty-state" style={{ padding: "var(--space-4) 0" }}>
+                                수업 계획이 없습니다
+                            </div>
+                        )}
+                    </div>
 
                     {/* 우측: 기록 입력 폼 */}
-                    <Card className="lg:col-span-2">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <FileText className="w-5 h-5" />
-                                수업 기록 작성
-                                {selectedPlan && (
-                                    <span className="text-sm font-normal text-muted-foreground ml-2">
-                                        — {selectedPlan.title}
-                                    </span>
-                                )}
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {saved && (
-                                <div className="mb-4 p-3 rounded-lg bg-green-50 text-green-700 flex items-center gap-2 text-sm">
-                                    <CheckCircle2 className="w-4 h-4" />
-                                    수업 기록이 저장되었습니다. 진도율이 자동 업데이트됩니다.
-                                </div>
+                    <div className="gb-card" style={{ padding: "var(--space-6)" }}>
+                        <h2 className="gb-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <FileText style={{ width: 18, height: 18, color: 'var(--color-primary)' }}/>
+                            수업 기록 작성
+                            {selectedPlan && (
+                                <span style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-normal)", color: "var(--color-text-tertiary)", marginLeft: "var(--space-2)" }}>
+                                    — {selectedPlan.title}
+                                </span>
                             )}
+                        </h2>
+                        
+                        {saved && (
+                            <div style={{ marginBottom: "var(--space-4)", padding: "var(--space-3)", borderRadius: "var(--radius-md)", background: "var(--color-success-10)", display: "flex", alignItems: "center", gap: "8px", color: "var(--color-success)", fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)" }}>
+                                <CheckCircle2 style={{ width: 16, height: 16 }} />
+                                수업 기록이 저장되었습니다. 진도율이 자동 업데이트됩니다.
+                            </div>
+                        )}
 
-                            <div className="space-y-4">
-                                {/* 날짜 */}
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">
-                                        <Calendar className="w-3.5 h-3.5 inline mr-1" />
-                                        수업 날짜
-                                    </label>
-                                    <Input
-                                        type="date"
-                                        value={recordDate}
-                                        onChange={(e) => setRecordDate(e.target.value)}
-                                        className="w-auto"
+                        <div className="gb-stack gb-stack-4">
+                            {/* 날짜 */}
+                            <div>
+                                <label className="gb-input-label" style={{ display: "flex", alignItems: "center" }}>
+                                    <Calendar style={{ width: 14, height: 14, marginRight: "4px" }} />
+                                    수업 날짜
+                                </label>
+                                <input
+                                    type="date"
+                                    className="gb-input"
+                                    value={recordDate}
+                                    onChange={(e) => setRecordDate(e.target.value)}
+                                    style={{ width: "auto" }}
+                                />
+                            </div>
+
+                            {/* 요약 */}
+                            <div>
+                                <label className="gb-input-label">수업 요약</label>
+                                <textarea
+                                    className="gb-input"
+                                    placeholder="오늘 수업 내용을 요약하세요..."
+                                    value={summary}
+                                    onChange={(e) => setSummary(e.target.value)}
+                                    rows={3}
+                                    style={{ resize: "none" }}
+                                />
+                            </div>
+
+                            {/* 범위 (페이지) */}
+                            <div>
+                                <label className="gb-input-label">범위 (페이지)</label>
+                                <div className="gb-row gb-row-2">
+                                    <input
+                                        type="number"
+                                        className="gb-input"
+                                        placeholder="시작 페이지"
+                                        value={pagesFrom}
+                                        onChange={(e) => setPagesFrom(e.target.value)}
+                                        style={{ width: "120px" }}
                                     />
-                                </div>
-
-                                {/* 요약 */}
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">수업 요약</label>
-                                    <textarea
-                                        placeholder="오늘 수업 내용을 요약하세요..."
-                                        value={summary}
-                                        onChange={(e) => setSummary(e.target.value)}
-                                        rows={3}
-                                        className="w-full px-3 py-2 rounded-md border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    <span style={{ color: "var(--color-text-tertiary)" }}>~</span>
+                                    <input
+                                        type="number"
+                                        className="gb-input"
+                                        placeholder="끝 페이지"
+                                        value={pagesTo}
+                                        onChange={(e) => setPagesTo(e.target.value)}
+                                        style={{ width: "120px" }}
                                     />
-                                </div>
-
-                                {/* 범위 (페이지) */}
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">범위 (페이지)</label>
-                                    <div className="flex items-center gap-2">
-                                        <Input
-                                            type="number"
-                                            placeholder="시작 페이지"
-                                            value={pagesFrom}
-                                            onChange={(e) => setPagesFrom(e.target.value)}
-                                            className="w-32"
-                                        />
-                                        <span className="text-muted-foreground">~</span>
-                                        <Input
-                                            type="number"
-                                            placeholder="끝 페이지"
-                                            value={pagesTo}
-                                            onChange={(e) => setPagesTo(e.target.value)}
-                                            className="w-32"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* 핵심 개념 */}
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">핵심 개념</label>
-                                    <textarea
-                                        placeholder="오늘 다룬 핵심 개념을 적어주세요..."
-                                        value={conceptNote}
-                                        onChange={(e) => setConceptNote(e.target.value)}
-                                        rows={2}
-                                        className="w-full px-3 py-2 rounded-md border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                    />
-                                </div>
-
-                                {/* 저장 버튼 */}
-                                <div className="flex justify-end pt-2">
-                                    <Button
-                                        onClick={handleSave}
-                                        disabled={saving || !selectedPlanId}
-                                        className="min-w-[120px]"
-                                    >
-                                        {saving ? (
-                                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                                        ) : (
-                                            <Plus className="w-4 h-4 mr-2" />
-                                        )}
-                                        기록 저장
-                                    </Button>
                                 </div>
                             </div>
-                        </CardContent>
-                    </Card>
+
+                            {/* 핵심 개념 */}
+                            <div>
+                                <label className="gb-input-label">핵심 개념</label>
+                                <textarea
+                                    className="gb-input"
+                                    placeholder="오늘 다룬 핵심 개념을 적어주세요..."
+                                    value={conceptNote}
+                                    onChange={(e) => setConceptNote(e.target.value)}
+                                    rows={2}
+                                    style={{ resize: "none" }}
+                                />
+                            </div>
+
+                            {/* 저장 버튼 */}
+                            <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: "var(--space-2)" }}>
+                                <button
+                                    className="gb-btn gb-btn-primary"
+                                    onClick={handleSave}
+                                    disabled={saving || !selectedPlanId}
+                                    style={{ minWidth: "120px", justifyContent: "center" }}
+                                >
+                                    {saving ? <Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} /> : <Plus style={{ width: 16, height: 16 }} />}
+                                    기록 저장
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

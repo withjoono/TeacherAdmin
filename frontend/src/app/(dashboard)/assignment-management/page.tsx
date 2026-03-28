@@ -1,19 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Header } from "@/components/layout/header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-    DialogClose,
-} from "@/components/ui/dialog";
 import {
     Plus,
     ClipboardList,
@@ -25,6 +12,7 @@ import {
     Calendar,
     Eye,
     MessageSquare,
+    X,
 } from "lucide-react";
 import { getMyArenaClasses } from "@/lib/api/classes";
 import type { ArenaClass } from "@/lib/api/classes";
@@ -44,6 +32,8 @@ export default function AssignmentManagementPage() {
     const [selectedClassId, setSelectedClassId] = useState<string>("");
     const [loading, setLoading] = useState(true);
 
+    const [activeTab, setActiveTab] = useState("create"); // "create", "submissions", "grade"
+
     // 과제 출제
     const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>([]);
     const [selectedLessonId, setSelectedLessonId] = useState("");
@@ -59,7 +49,7 @@ export default function AssignmentManagementPage() {
     const [submissions, setSubmissions] = useState<AssignmentSubmission[]>([]);
     const [submissionsLoading, setSubmissionsLoading] = useState(false);
 
-    // 채점
+    // 채점 다이얼로그 UI 상태
     const [gradeDialog, setGradeDialog] = useState<AssignmentSubmission | null>(null);
     const [gradeScore, setGradeScore] = useState("");
     const [gradeFeedback, setGradeFeedback] = useState("");
@@ -168,420 +158,424 @@ export default function AssignmentManagementPage() {
 
     if (loading) {
         return (
-            <div className="flex flex-col">
-                <Header title="과제 관리" />
-                <div className="flex-1 flex items-center justify-center p-6">
-                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            <div className="gb-page-dashboard gb-stack gb-stack-6" style={{ paddingTop: "var(--space-10)" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "300px" }}>
+                    <Loader2 style={{ width: 32, height: 32, color: "var(--color-text-disabled)", animation: "spin 1s linear infinite" }} />
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="flex flex-col">
-            <Header title="과제 관리" />
+        <div className="gb-page-dashboard gb-stack gb-stack-8" style={{ paddingTop: "var(--space-10)" }}>
+            {/* 페이지 헤더 */}
+            <div className="gb-page-header" style={{ marginBottom: 0 }}>
+                <h1 className="gb-page-title">과제 관리</h1>
+                <p className="gb-page-desc">
+                    학생들에게 과제를 출제하고 제출된 과제를 채점하세요
+                </p>
+            </div>
 
-            <div className="flex-1 p-6 space-y-6">
+            <div className="gb-stack gb-stack-6">
                 {/* 클래스 선택 */}
-                <Card>
-                    <CardContent className="p-4">
-                        <div className="flex gap-2 flex-wrap items-center">
-                            <span className="text-sm font-medium text-muted-foreground mr-2">
-                                클래스
-                            </span>
-                            {classes.map((cls) => (
-                                <button
-                                    key={cls.id}
-                                    onClick={() => setSelectedClassId(String(cls.id))}
-                                    className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${String(cls.id) === selectedClassId
-                                            ? "bg-primary text-primary-foreground shadow-md"
-                                            : "bg-muted hover:bg-muted/80"
-                                        }`}
+                <div className="gb-card">
+                    <div style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)", color: "var(--color-text-tertiary)", marginBottom: "var(--space-3)" }}>
+                        클래스 선택
+                    </div>
+                    <div className="gb-row gb-row-3" style={{ flexWrap: "wrap" }}>
+                        {classes.map((cls) => (
+                            <button
+                                key={cls.id}
+                                onClick={() => setSelectedClassId(String(cls.id))}
+                                className={`gb-btn ${String(cls.id) === selectedClassId ? 'gb-btn-primary' : 'gb-btn-outline'}`}
+                            >
+                                {cls.name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* 탭 헤더 */}
+                <div style={{ display: "flex", gap: "var(--space-6)", borderBottom: "1px solid var(--color-border-light)" }}>
+                    {[
+                        { id: "create", icon: Plus, label: "과제 출제" },
+                        { id: "submissions", icon: Eye, label: "제출 현황" },
+                        { id: "grade", icon: FileText, label: "채점" },
+                    ].map(tab => {
+                        const Icon = tab.icon;
+                        const isActive = activeTab === tab.id;
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                style={{
+                                    display: "flex", alignItems: "center", gap: "8px",
+                                    padding: "var(--space-3) 0",
+                                    fontSize: "var(--text-sm)",
+                                    fontWeight: isActive ? "var(--weight-semibold)" : "var(--weight-medium)",
+                                    color: isActive ? "var(--color-primary)" : "var(--color-text-tertiary)",
+                                    borderBottom: isActive ? "2px solid var(--color-primary)" : "2px solid transparent",
+                                    background: "none", borderTop: "none", borderLeft: "none", borderRight: "none",
+                                    cursor: "pointer", transition: "all var(--transition-short)"
+                                }}
+                            >
+                                <Icon style={{ width: 16, height: 16 }} />
+                                {tab.label}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* 과제 출제 */}
+                {activeTab === "create" && (
+                    <div className="gb-card">
+                        <h2 className="gb-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <ClipboardList style={{ width: 18, height: 18, color: 'var(--color-primary)' }}/>
+                            새 과제 출제
+                        </h2>
+                        <div className="gb-stack gb-stack-4" style={{ maxWidth: '600px' }}>
+                            {created && (
+                                <div style={{ padding: "var(--space-3)", borderRadius: "var(--radius-md)", background: "var(--color-success-10)", display: "flex", alignItems: "center", gap: "8px", color: "var(--color-success)", fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)" }}>
+                                    <CheckCircle2 style={{ width: 16, height: 16 }} />
+                                    과제가 생성되었습니다!
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="gb-input-label">연결할 수업 계획 (선택)</label>
+                                <select
+                                    value={selectedLessonId}
+                                    onChange={(e) => setSelectedLessonId(e.target.value)}
+                                    className="gb-input"
                                 >
-                                    {cls.name}
-                                </button>
-                            ))}
+                                    <option value="">없음</option>
+                                    {lessonPlans.map((plan) => (
+                                        <option key={plan.id} value={plan.id}>
+                                            {plan.title}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="gb-input-label">과제 제목 <span style={{ color: "var(--color-error)" }}>*</span></label>
+                                <input
+                                    type="text"
+                                    className="gb-input"
+                                    placeholder="예: 3단원 연습문제"
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="gb-input-label">설명</label>
+                                <textarea
+                                    className="gb-input"
+                                    placeholder="과제 내용을 설명하세요..."
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    rows={3}
+                                    style={{ resize: "none" }}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="gb-input-label" style={{ display: "flex", alignItems: "center" }}>
+                                    <Calendar style={{ width: 14, height: 14, marginRight: "4px" }} />
+                                    마감일
+                                </label>
+                                <input
+                                    type="date"
+                                    className="gb-input"
+                                    value={dueDate}
+                                    onChange={(e) => setDueDate(e.target.value)}
+                                />
+                            </div>
+
+                            <button
+                                className="gb-btn gb-btn-primary"
+                                style={{ width: "100%", justifyContent: "center", marginTop: "var(--space-4)" }}
+                                onClick={handleCreate}
+                                disabled={creating || !title.trim()}
+                            >
+                                {creating ? <Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} /> : <Plus style={{ width: 16, height: 16 }} />}
+                                과제 출제
+                            </button>
                         </div>
-                    </CardContent>
-                </Card>
 
-                <Tabs defaultValue="create" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="create">
-                            <Plus className="w-4 h-4 mr-2" />
-                            과제 출제
-                        </TabsTrigger>
-                        <TabsTrigger value="submissions">
-                            <Eye className="w-4 h-4 mr-2" />
-                            제출 현황
-                        </TabsTrigger>
-                        <TabsTrigger value="grade">
-                            <FileText className="w-4 h-4 mr-2" />
-                            채점
-                        </TabsTrigger>
-                    </TabsList>
-
-                    {/* 과제 출제 */}
-                    <TabsContent value="create" className="space-y-4">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <ClipboardList className="w-5 h-5" />
-                                    새 과제 출제
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                {created && (
-                                    <div className="mb-4 p-3 rounded-lg bg-green-50 text-green-700 flex items-center gap-2 text-sm">
-                                        <CheckCircle2 className="w-4 h-4" />
-                                        과제가 생성되었습니다!
-                                    </div>
-                                )}
-                                <div className="space-y-4 max-w-lg">
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">
-                                            연결할 수업 계획 (선택)
-                                        </label>
-                                        <select
-                                            value={selectedLessonId}
-                                            onChange={(e) => setSelectedLessonId(e.target.value)}
-                                            className="w-full px-3 py-2 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                        >
-                                            <option value="">없음</option>
-                                            {lessonPlans.map((plan) => (
-                                                <option key={plan.id} value={plan.id}>
-                                                    {plan.title}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">과제 제목 *</label>
-                                        <Input
-                                            placeholder="예: 3단원 연습문제"
-                                            value={title}
-                                            onChange={(e) => setTitle(e.target.value)}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">설명</label>
-                                        <textarea
-                                            placeholder="과제 내용을 설명하세요..."
-                                            value={description}
-                                            onChange={(e) => setDescription(e.target.value)}
-                                            rows={3}
-                                            className="w-full px-3 py-2 rounded-md border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">
-                                            <Calendar className="w-3.5 h-3.5 inline mr-1" />
-                                            마감일
-                                        </label>
-                                        <Input
-                                            type="date"
-                                            value={dueDate}
-                                            onChange={(e) => setDueDate(e.target.value)}
-                                            className="w-auto"
-                                        />
-                                    </div>
-
-                                    <Button
-                                        onClick={handleCreate}
-                                        disabled={creating || !title.trim()}
-                                        className="w-full"
-                                    >
-                                        {creating ? (
-                                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                                        ) : (
-                                            <Plus className="w-4 h-4 mr-2" />
+                        {createdAssignments.length > 0 && (
+                            <div className="gb-stack gb-stack-2" style={{ marginTop: "var(--space-8)" }}>
+                                <h4 style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)", color: "var(--color-text-tertiary)" }}>
+                                    출제된 과제
+                                </h4>
+                                {createdAssignments.map((a, i) => (
+                                    <div key={i} className="gb-row gb-row-2" style={{ padding: "var(--space-3)", borderRadius: "var(--radius-md)", background: "var(--color-primary-50, var(--color-bg-secondary))", border: "1px solid var(--color-border-light)", fontSize: "var(--text-sm)" }}>
+                                        <ClipboardList style={{ width: 16, height: 16, color: "var(--color-primary)" }} />
+                                        <span style={{ flex: 1 }}>{a.title || a.id}</span>
+                                        {a.dueDate && (
+                                            <span style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)" }}>
+                                                마감: {a.dueDate.split("T")[0]}
+                                            </span>
                                         )}
-                                        과제 출제
-                                    </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* 제출 현황 */}
+                {activeTab === "submissions" && (
+                    <div className="gb-card">
+                        <div className="gb-row gb-row-4" style={{ justifyContent: "space-between", marginBottom: "var(--space-6)" }}>
+                            <h2 className="gb-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 0 }}>
+                                <Eye style={{ width: 18, height: 18, color: 'var(--color-primary)' }}/>
+                                제출 현황
+                            </h2>
+                            <select
+                                value={selectedAssignmentId}
+                                onChange={(e) => {
+                                    setSelectedAssignmentId(e.target.value);
+                                    if (e.target.value) fetchSubmissions(e.target.value);
+                                }}
+                                className="gb-input"
+                                style={{ width: "240px" }}
+                            >
+                                <option value="">과제 선택</option>
+                                {createdAssignments.map((a, i) => (
+                                    <option key={i} value={a.id}>
+                                        {a.title || `과제 ${i + 1}`}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* 통계 */}
+                        {submissions.length > 0 && (
+                            <div className="gb-grid gb-grid-3" style={{ marginBottom: "var(--space-6)" }}>
+                                <div style={{ background: "var(--color-primary-50, var(--color-bg-secondary))", padding: "var(--space-4)", borderRadius: "var(--radius-lg)", textAlign: "center" }}>
+                                    <div style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--weight-bold)", color: "var(--color-primary)" }}>
+                                        {submissions.length}
+                                    </div>
+                                    <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)", marginTop: "var(--space-1)" }}>전체</div>
                                 </div>
-
-                                {createdAssignments.length > 0 && (
-                                    <div className="mt-6 space-y-2">
-                                        <h4 className="text-sm font-medium text-muted-foreground">
-                                            출제된 과제
-                                        </h4>
-                                        {createdAssignments.map((a, i) => (
-                                            <div
-                                                key={i}
-                                                className="p-3 rounded-lg border bg-accent/30 text-sm flex items-center gap-2"
-                                            >
-                                                <ClipboardList className="w-4 h-4 text-primary" />
-                                                {a.title || a.id}
-                                                {a.dueDate && (
-                                                    <span className="text-xs text-muted-foreground ml-auto">
-                                                        마감: {a.dueDate.split("T")[0]}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        ))}
+                                <div style={{ background: "var(--color-success-10)", padding: "var(--space-4)", borderRadius: "var(--radius-lg)", textAlign: "center" }}>
+                                    <div style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--weight-bold)", color: "var(--color-success)" }}>
+                                        {submittedCount}
                                     </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-
-                    {/* 제출 현황 */}
-                    <TabsContent value="submissions" className="space-y-4">
-                        <Card>
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Eye className="w-5 h-5" />
-                                        제출 현황
-                                    </CardTitle>
-                                    <select
-                                        value={selectedAssignmentId}
-                                        onChange={(e) => {
-                                            setSelectedAssignmentId(e.target.value);
-                                            if (e.target.value) fetchSubmissions(e.target.value);
-                                        }}
-                                        className="px-3 py-2 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                    >
-                                        <option value="">과제 선택</option>
-                                        {createdAssignments.map((a, i) => (
-                                            <option key={i} value={a.id}>
-                                                {a.title || `과제 ${i + 1}`}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)", marginTop: "var(--space-1)" }}>제출</div>
                                 </div>
-                            </CardHeader>
-                            <CardContent>
-                                {/* 통계 */}
-                                {submissions.length > 0 && (
-                                    <div className="grid grid-cols-3 gap-4 mb-6">
-                                        <div className="p-4 rounded-lg bg-blue-50 text-center">
-                                            <p className="text-2xl font-bold text-blue-600">
-                                                {submissions.length}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">전체</p>
-                                        </div>
-                                        <div className="p-4 rounded-lg bg-green-50 text-center">
-                                            <p className="text-2xl font-bold text-green-600">
-                                                {submittedCount}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">제출</p>
-                                        </div>
-                                        <div className="p-4 rounded-lg bg-orange-50 text-center">
-                                            <p className="text-2xl font-bold text-orange-600">
-                                                {submissions.length - submittedCount}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">미제출</p>
-                                        </div>
+                                <div style={{ background: "var(--color-warning-10)", padding: "var(--space-4)", borderRadius: "var(--radius-lg)", textAlign: "center" }}>
+                                    <div style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--weight-bold)", color: "var(--color-warning)" }}>
+                                        {submissions.length - submittedCount}
                                     </div>
-                                )}
+                                    <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)", marginTop: "var(--space-1)" }}>미제출</div>
+                                </div>
+                            </div>
+                        )}
 
-                                {submissionsLoading ? (
-                                    <div className="flex justify-center py-8">
-                                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                                    </div>
-                                ) : submissions.length > 0 ? (
-                                    <div className="space-y-2">
-                                        <div className="grid grid-cols-4 gap-4 px-4 py-2 text-sm font-medium text-muted-foreground border-b">
-                                            <div>학생</div>
-                                            <div>제출 상태</div>
-                                            <div>제출일</div>
-                                            <div>점수</div>
-                                        </div>
+                        {submissionsLoading ? (
+                            <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-8) 0" }}>
+                                <Loader2 style={{ width: 24, height: 24, color: "var(--color-text-disabled)", animation: "spin 1s linear infinite" }} />
+                            </div>
+                        ) : submissions.length > 0 ? (
+                            <div>
+                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                    <thead>
+                                        <tr style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid var(--color-border-light)" }}>
+                                            <th style={{ textAlign: "left", padding: "var(--space-3)", fontWeight: "var(--weight-semibold)" }}>학생</th>
+                                            <th style={{ textAlign: "left", padding: "var(--space-3)", fontWeight: "var(--weight-semibold)" }}>제출 상태</th>
+                                            <th style={{ textAlign: "left", padding: "var(--space-3)", fontWeight: "var(--weight-semibold)" }}>제출일</th>
+                                            <th style={{ textAlign: "left", padding: "var(--space-3)", fontWeight: "var(--weight-semibold)" }}>점수</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
                                         {submissions.map((sub) => (
-                                            <div
-                                                key={sub.id}
-                                                className="grid grid-cols-4 gap-4 items-center px-4 py-3 rounded-lg hover:bg-accent/30"
-                                            >
-                                                <div className="font-medium">
+                                            <tr key={sub.id} style={{ borderBottom: "1px solid var(--color-border-light)" }}>
+                                                <td style={{ padding: "var(--space-3)", fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)" }}>
                                                     {sub.studentName || sub.studentId}
-                                                </div>
-                                                <div>
-                                                    <span
-                                                        className={`px-2 py-0.5 rounded-full text-xs font-semibold ${sub.submittedAt
-                                                                ? "bg-green-100 text-green-700"
-                                                                : "bg-gray-100 text-gray-500"
-                                                            }`}
-                                                    >
+                                                </td>
+                                                <td style={{ padding: "var(--space-3)" }}>
+                                                    <span className={`gb-badge ${sub.submittedAt ? "gb-badge-success" : ""}`} style={{ background: !sub.submittedAt ? "var(--color-bg-secondary)" : undefined, color: !sub.submittedAt ? "var(--color-text-tertiary)" : undefined }}>
                                                         {sub.submittedAt ? "제출완료" : "미제출"}
                                                     </span>
-                                                </div>
-                                                <div className="text-sm text-muted-foreground">
-                                                    {sub.submittedAt
-                                                        ? new Date(sub.submittedAt).toLocaleDateString(
-                                                            "ko-KR"
-                                                        )
-                                                        : "-"}
-                                                </div>
-                                                <div className="text-sm">
-                                                    {sub.score !== undefined && sub.score !== null
-                                                        ? `${sub.score}점`
-                                                        : "-"}
-                                                </div>
-                                            </div>
+                                                </td>
+                                                <td style={{ padding: "var(--space-3)", fontSize: "var(--text-sm)", color: "var(--color-text-tertiary)" }}>
+                                                    {sub.submittedAt ? new Date(sub.submittedAt).toLocaleDateString("ko-KR") : "—"}
+                                                </td>
+                                                <td style={{ padding: "var(--space-3)", fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)" }}>
+                                                    {sub.score !== undefined && sub.score !== null ? `${sub.score}점` : "—"}
+                                                </td>
+                                            </tr>
                                         ))}
-                                    </div>
-                                ) : (
-                                    <div className="text-center text-sm text-muted-foreground py-8">
-                                        {selectedAssignmentId
-                                            ? "제출 기록이 없습니다"
-                                            : "과제를 선택하세요"}
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <div className="gb-empty-state" style={{ padding: "var(--space-8) 0" }}>
+                                {selectedAssignmentId
+                                    ? "제출 기록이 없습니다"
+                                    : "과제를 선택하세요"}
+                            </div>
+                        )}
+                    </div>
+                )}
 
-                    {/* 채점 */}
-                    <TabsContent value="grade" className="space-y-4">
-                        <Card>
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <CardTitle className="flex items-center gap-2">
-                                        <FileText className="w-5 h-5" />
-                                        채점
-                                    </CardTitle>
-                                    <select
-                                        value={selectedAssignmentId}
-                                        onChange={(e) => {
-                                            setSelectedAssignmentId(e.target.value);
-                                            if (e.target.value) fetchSubmissions(e.target.value);
-                                        }}
-                                        className="px-3 py-2 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                    >
-                                        <option value="">과제 선택</option>
-                                        {createdAssignments.map((a, i) => (
-                                            <option key={i} value={a.id}>
-                                                {a.title || `과제 ${i + 1}`}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                {/* 채점 현황 */}
-                                {submissions.length > 0 && (
-                                    <div className="mb-4 p-3 rounded-lg bg-blue-50 text-sm">
-                                        전체 {submissions.length}명 중{" "}
-                                        <span className="font-bold text-green-600">{gradedCount}명</span>{" "}
-                                        채점 완료,{" "}
-                                        <span className="font-bold text-orange-600">
-                                            {submittedCount - gradedCount}명
-                                        </span>{" "}
-                                        채점 대기
-                                    </div>
-                                )}
+                {/* 채점 */}
+                {activeTab === "grade" && (
+                    <div className="gb-card">
+                        <div className="gb-row gb-row-4" style={{ justifyContent: "space-between", marginBottom: "var(--space-6)" }}>
+                            <h2 className="gb-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 0 }}>
+                                <FileText style={{ width: 18, height: 18, color: 'var(--color-primary)' }}/>
+                                채점
+                            </h2>
+                            <select
+                                value={selectedAssignmentId}
+                                onChange={(e) => {
+                                    setSelectedAssignmentId(e.target.value);
+                                    if (e.target.value) fetchSubmissions(e.target.value);
+                                }}
+                                className="gb-input"
+                                style={{ width: "240px" }}
+                            >
+                                <option value="">과제 선택</option>
+                                {createdAssignments.map((a, i) => (
+                                    <option key={i} value={a.id}>
+                                        {a.title || `과제 ${i + 1}`}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
 
-                                {submissionsLoading ? (
-                                    <div className="flex justify-center py-8">
-                                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                                    </div>
-                                ) : submissions.filter((s) => s.submittedAt).length > 0 ? (
-                                    <div className="space-y-2">
-                                        {submissions
-                                            .filter((s) => s.submittedAt)
-                                            .map((sub) => (
-                                                <div
-                                                    key={sub.id}
-                                                    className="p-4 rounded-lg border hover:bg-accent/30 transition-colors"
-                                                >
-                                                    <div className="flex items-center justify-between">
-                                                        <div>
-                                                            <p className="font-medium">
-                                                                {sub.studentName || sub.studentId}
-                                                            </p>
-                                                            <p className="text-xs text-muted-foreground">
-                                                                제출:{" "}
-                                                                {new Date(sub.submittedAt!).toLocaleString(
-                                                                    "ko-KR"
-                                                                )}
-                                                            </p>
-                                                        </div>
-                                                        <div className="flex items-center gap-3">
-                                                            {sub.score !== undefined && sub.score !== null ? (
-                                                                <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-sm font-semibold">
-                                                                    {sub.score}점
-                                                                </span>
-                                                            ) : (
-                                                                <Button
-                                                                    size="sm"
-                                                                    onClick={() => {
-                                                                        setGradeDialog(sub);
-                                                                        setGradeScore("");
-                                                                        setGradeFeedback("");
-                                                                    }}
-                                                                >
-                                                                    <MessageSquare className="w-4 h-4 mr-1" />
-                                                                    채점
-                                                                </Button>
-                                                            )}
-                                                        </div>
+                        {submissions.length > 0 && (
+                            <div style={{ marginBottom: "var(--space-6)", padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-md)", background: "var(--color-primary-50, var(--color-bg-secondary))", fontSize: "var(--text-sm)" }}>
+                                전체 {submissions.length}명 중{" "}
+                                <span style={{ fontWeight: "var(--weight-bold)", color: "var(--color-success)" }}>{gradedCount}명</span>{" "}
+                                채점 완료,{" "}
+                                <span style={{ fontWeight: "var(--weight-bold)", color: "var(--color-warning)" }}>
+                                    {submittedCount - gradedCount}명
+                                </span>{" "}
+                                채점 대기
+                            </div>
+                        )}
+
+                        {submissionsLoading ? (
+                            <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-8) 0" }}>
+                                <Loader2 style={{ width: 24, height: 24, color: "var(--color-text-disabled)", animation: "spin 1s linear infinite" }} />
+                            </div>
+                        ) : submissions.filter((s) => s.submittedAt).length > 0 ? (
+                            <div className="gb-stack gb-stack-3">
+                                {submissions
+                                    .filter((s) => s.submittedAt)
+                                    .map((sub) => (
+                                        <div
+                                            key={sub.id}
+                                            style={{ padding: "var(--space-4)", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border-light)", transition: "background var(--transition-short)" }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = "var(--color-bg-secondary)"}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                                        >
+                                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                                <div>
+                                                    <div style={{ fontSize: "var(--text-base)", fontWeight: "var(--weight-semibold)", color: "var(--color-text)" }}>
+                                                        {sub.studentName || sub.studentId}
                                                     </div>
-                                                    {sub.feedback && (
-                                                        <div className="mt-2 p-2 rounded bg-blue-50 text-sm text-blue-700">
-                                                            💬 {sub.feedback}
-                                                        </div>
+                                                    <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)", marginTop: "var(--space-1)" }}>
+                                                        제출: {new Date(sub.submittedAt!).toLocaleString("ko-KR")}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    {sub.score !== undefined && sub.score !== null ? (
+                                                        <span className="gb-badge gb-badge-success" style={{ padding: "4px 10px", fontSize: "var(--text-sm)" }}>
+                                                            {sub.score}점
+                                                        </span>
+                                                    ) : (
+                                                        <button
+                                                            className="gb-btn gb-btn-primary"
+                                                            style={{ height: "32px", padding: "0 var(--space-3)", fontSize: "var(--text-sm)" }}
+                                                            onClick={() => {
+                                                                setGradeDialog(sub);
+                                                                setGradeScore("");
+                                                                setGradeFeedback("");
+                                                            }}
+                                                        >
+                                                            <MessageSquare style={{ width: 14, height: 14 }} />
+                                                            채점
+                                                        </button>
                                                     )}
                                                 </div>
-                                            ))}
-                                    </div>
-                                ) : (
-                                    <div className="text-center text-sm text-muted-foreground py-8">
-                                        {selectedAssignmentId
-                                            ? "제출된 과제가 없습니다"
-                                            : "과제를 선택하세요"}
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-                </Tabs>
+                                            </div>
+                                            {sub.feedback && (
+                                                <div style={{ marginTop: "var(--space-3)", padding: "var(--space-3)", borderRadius: "var(--radius-md)", background: "var(--color-primary-50, var(--color-bg-secondary))", fontSize: "var(--text-sm)", color: "var(--color-text)" }}>
+                                                    💬 {sub.feedback}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                            </div>
+                        ) : (
+                            <div className="gb-empty-state" style={{ padding: "var(--space-8) 0" }}>
+                                {selectedAssignmentId
+                                    ? "제출된 과제가 없습니다"
+                                    : "과제를 선택하세요"}
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* 채점 다이얼로그 */}
-            <Dialog open={!!gradeDialog} onOpenChange={(o) => !o && setGradeDialog(null)}>
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>
-                            {gradeDialog?.studentName || gradeDialog?.studentId} 채점
-                        </DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-2">
-                        <div>
-                            <label className="block text-sm font-medium mb-1">점수</label>
-                            <Input
-                                type="number"
-                                placeholder="점수 입력"
-                                value={gradeScore}
-                                onChange={(e) => setGradeScore(e.target.value)}
-                                min={0}
-                            />
+            {gradeDialog && (
+                <div className="gb-modal-overlay">
+                    <div className="gb-modal">
+                        <div className="gb-row" style={{ justifyContent: "space-between", marginBottom: "var(--space-6)" }}>
+                            <h2 className="gb-modal-title" style={{ marginBottom: 0 }}>
+                                {gradeDialog.studentName || gradeDialog.studentId} 채점
+                            </h2>
+                            <button className="gb-header-icon-btn" onClick={() => setGradeDialog(null)}>
+                                <X style={{ width: 16, height: 16 }} />
+                            </button>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-1">피드백</label>
-                            <textarea
-                                placeholder="학생에게 전달할 피드백을 작성하세요..."
-                                value={gradeFeedback}
-                                onChange={(e) => setGradeFeedback(e.target.value)}
-                                rows={3}
-                                className="w-full px-3 py-2 rounded-md border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
-                            />
+                        
+                        <div className="gb-stack gb-stack-4">
+                            <div>
+                                <label className="gb-input-label">점수</label>
+                                <input
+                                    type="number"
+                                    className="gb-input"
+                                    placeholder="점수 입력"
+                                    value={gradeScore}
+                                    onChange={(e) => setGradeScore(e.target.value)}
+                                    min={0}
+                                />
+                            </div>
+                            <div>
+                                <label className="gb-input-label">피드백</label>
+                                <textarea
+                                    placeholder="학생에게 전달할 피드백을 작성하세요..."
+                                    value={gradeFeedback}
+                                    onChange={(e) => setGradeFeedback(e.target.value)}
+                                    rows={3}
+                                    className="gb-input"
+                                    style={{ resize: "none" }}
+                                />
+                            </div>
+                        </div>
+                        
+                        <div className="gb-modal-actions" style={{ marginTop: "var(--space-6)", justifyContent: "flex-end" }}>
+                            <button className="gb-btn gb-btn-secondary" onClick={() => setGradeDialog(null)}>취소</button>
+                            <button
+                                className="gb-btn gb-btn-primary"
+                                onClick={handleGrade}
+                                disabled={grading || !gradeScore}
+                            >
+                                {grading ? <Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} /> : null}
+                                채점 완료
+                            </button>
                         </div>
                     </div>
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button variant="outline">취소</Button>
-                        </DialogClose>
-                        <Button onClick={handleGrade} disabled={grading || !gradeScore}>
-                            {grading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                            채점 완료
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                </div>
+            )}
         </div>
     );
 }

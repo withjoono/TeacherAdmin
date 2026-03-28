@@ -3,19 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import * as XLSX from "xlsx";
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle } from "lucide-react";
-import { Header } from "@/components/layout/header";
-import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, FileText } from "lucide-react";
 import { useAuthStore } from "@/lib/auth";
 import { mockExamApi, type MockExam, type CreateQuestionDto } from "@/lib/api";
 import type { UploadedQuestion } from "@/types";
@@ -170,163 +158,164 @@ export default function QuestionUploadPage() {
   const validCount = questions.filter((q) => q.isValid).length;
   const invalidCount = questions.filter((q) => !q.isValid).length;
 
-  const examOptions = exams.map((e) => ({
-    value: String(e.id),
-    label: `${e.code} - ${e.name}`,
-  }));
-
   return (
-    <div className="flex flex-col">
-      <Header title="문제 업로드" />
+    <div className="gb-page-dashboard gb-stack gb-stack-8" style={{ paddingTop: "var(--space-10)" }}>
+      {/* 페이지 헤더 */}
+      <div className="gb-page-header" style={{ marginBottom: 0 }}>
+        <h1 className="gb-page-title">문제 대량 업로드</h1>
+        <p className="gb-page-desc">시험별 문제를 엑셀 형식으로 일괄 등록하세요</p>
+      </div>
 
-      <div className="flex-1 p-6">
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>업로드 설정</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">시험 선택</label>
-                <Select
-                  options={examOptions}
-                  placeholder="시험을 선택하세요"
-                  value={selectedExamId}
-                  onChange={(e) => setSelectedExamId(e.target.value)}
-                />
-              </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-6)", alignItems: "start" }}>
+        {/* 업로드 설정 */}
+        <div className="gb-card gb-stack gb-stack-4" style={{ padding: "var(--space-6)" }}>
+          <h2 className="gb-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <FileSpreadsheet style={{ width: 18, height: 18, color: 'var(--color-primary)' }}/>
+            업로드 설정
+          </h2>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">과목</label>
-                <Select
-                  options={subjectOptions}
-                  placeholder="과목을 선택하세요"
-                  value={selectedSubject}
-                  onChange={(e) => setSelectedSubject(e.target.value)}
-                />
-              </div>
+          <div>
+            <label className="gb-input-label">시험 선택</label>
+            <select
+              className="gb-input"
+              value={selectedExamId}
+              onChange={(e) => setSelectedExamId(e.target.value)}
+            >
+              <option value="" disabled>시험을 선택하세요</option>
+              {exams.map(e => (
+                <option key={e.id} value={String(e.id)}>{e.code} - {e.name}</option>
+              ))}
+            </select>
+          </div>
 
-              <div
-                {...getRootProps()}
-                className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 transition-colors ${
-                  isDragActive
-                    ? "border-primary bg-primary/5"
-                    : "border-muted-foreground/25 hover:border-primary"
-                }`}
-              >
-                <input {...getInputProps()} />
-                <FileSpreadsheet className="mb-4 h-12 w-12 text-muted-foreground" />
-                {isDragActive ? (
-                  <p className="text-sm text-muted-foreground">
-                    파일을 놓으세요...
-                  </p>
-                ) : (
-                  <>
-                    <p className="text-sm font-medium">
-                      Excel/CSV 파일을 드래그하거나 클릭하여 선택
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      .xlsx, .xls, .csv 파일 지원
-                    </p>
-                  </>
-                )}
-              </div>
+          <div>
+            <label className="gb-input-label">과목</label>
+            <select
+              className="gb-input"
+              value={selectedSubject}
+              onChange={(e) => setSelectedSubject(e.target.value)}
+            >
+              <option value="" disabled>과목을 선택하세요</option>
+              {subjectOptions.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
 
-              <div className="rounded-lg bg-muted p-4 text-sm">
-                <p className="font-medium">엑셀 템플릿 형식:</p>
-                <p className="mt-1 text-muted-foreground">
-                  questionNumber | answer | score | difficulty | correctRate
+          <div
+            {...getRootProps()}
+            style={{
+              border: "2px dashed",
+              borderRadius: "var(--radius-lg)",
+              padding: "var(--space-8)",
+              textAlign: "center",
+              cursor: "pointer",
+              transition: "all var(--transition-short)",
+              borderColor: isDragActive ? "var(--color-primary)" : "var(--color-border)",
+              background: isDragActive ? "var(--color-primary-50, var(--color-bg-secondary))" : "transparent"
+            }}
+          >
+            <input {...getInputProps()} />
+            <FileSpreadsheet style={{ width: 48, height: 48, margin: "0 auto var(--space-4)", color: "var(--color-text-disabled)" }} />
+            {isDragActive ? (
+              <p style={{ fontSize: "var(--text-sm)", color: "var(--color-text-secondary)", fontWeight: "var(--weight-medium)" }}>
+                파일을 놓으세요...
+              </p>
+            ) : (
+              <>
+                <p style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)" }}>
+                  Excel/CSV 파일을 드래그하거나 클릭하여 선택
                 </p>
-                <p className="text-muted-foreground">
-                  또는: 문제번호 | 정답 | 배점 | 난이도 | 정답률
+                <p style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)", marginTop: "4px" }}>
+                  .xlsx, .xls, .csv 파일 지원
                 </p>
-              </div>
-            </CardContent>
-          </Card>
+              </>
+            )}
+          </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>미리보기</span>
-                {questions.length > 0 && (
-                  <span className="text-sm font-normal text-muted-foreground">
-                    유효: {validCount}개 / 오류: {invalidCount}개
-                  </span>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {questions.length === 0 ? (
-                <div className="py-8 text-center text-muted-foreground">
-                  파일을 업로드하면 미리보기가 표시됩니다.
+          <div style={{ padding: "var(--space-4)", background: "var(--color-bg-secondary)", borderRadius: "var(--radius-md)" }}>
+            <p style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-bold)", marginBottom: "var(--space-1)" }}>엑셀 템플릿 형식:</p>
+            <p style={{ fontSize: "var(--text-xs)", color: "var(--color-text-secondary)", fontFamily: "monospace", opacity: 0.8 }}>
+              questionNumber | answer | score | difficulty | correctRate
+            </p>
+            <p style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)", marginTop: "var(--space-1)" }}>
+              또는: 문제번호 | 정답 | 배점 | 난이도 | 정답률
+            </p>
+          </div>
+        </div>
+
+        {/* 엑셀 파일 파싱 미리보기 */}
+        <div className="gb-card" style={{ padding: "var(--space-6)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-4)" }}>
+            <h2 className="gb-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 0 }}>
+              <FileText style={{ width: 18, height: 18, color: 'var(--color-primary)' }}/>
+              미리보기
+            </h2>
+            {questions.length > 0 && (
+              <span style={{ fontSize: "var(--text-xs)", color: "var(--color-text-secondary)" }}>
+                유효: <span style={{ color: "var(--color-success)", fontWeight: "bold" }}>{validCount}</span>개 / 오류: <span style={{ color: "var(--color-error)", fontWeight: "bold" }}>{invalidCount}</span>개
+              </span>
+            )}
+          </div>
+
+          {questions.length === 0 ? (
+            <div className="gb-empty-state" style={{ padding: "var(--space-12) 0" }}>
+              파일을 업로드하면 미리보기가 표시됩니다.
+            </div>
+          ) : (
+            <>
+              <div style={{ maxHeight: "400px", overflowY: "auto", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead style={{ position: "sticky", top: 0, background: "var(--color-bg-light)" }}>
+                    <tr style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)", borderBottom: "1px solid var(--color-border-light)" }}>
+                      <th style={{ textAlign: "left", padding: "var(--space-3)", fontWeight: "var(--weight-semibold)" }}>번호</th>
+                      <th style={{ textAlign: "left", padding: "var(--space-3)", fontWeight: "var(--weight-semibold)" }}>정답</th>
+                      <th style={{ textAlign: "left", padding: "var(--space-3)", fontWeight: "var(--weight-semibold)" }}>배점</th>
+                      <th style={{ textAlign: "left", padding: "var(--space-3)", fontWeight: "var(--weight-semibold)" }}>상태</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {questions.map((q, i) => (
+                      <tr key={i} style={{ borderBottom: "1px solid var(--color-border-light)", background: "white" }}>
+                        <td style={{ padding: "var(--space-3)", fontSize: "var(--text-sm)" }}>{q.questionNumber}</td>
+                        <td style={{ padding: "var(--space-3)", fontSize: "var(--text-sm)" }}>{q.answer}</td>
+                        <td style={{ padding: "var(--space-3)", fontSize: "var(--text-sm)" }}>{q.score}</td>
+                        <td style={{ padding: "var(--space-3)", fontSize: "var(--text-sm)" }}>
+                          {q.isValid ? (
+                            <CheckCircle style={{ width: 16, height: 16, color: "var(--color-success)" }} />
+                          ) : (
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px", color: "var(--color-error)" }}>
+                              <AlertCircle style={{ width: 16, height: 16 }} />
+                              <span style={{ fontSize: "10px" }}>{q.errors?.join(", ")}</span>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {uploadResult && (
+                <div style={{ marginTop: "var(--space-4)", padding: "var(--space-3)", borderRadius: "var(--radius-md)", fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)",
+                  background: uploadResult.success ? "var(--color-success-10)" : "var(--color-error-10)",
+                  color: uploadResult.success ? "var(--color-success)" : "var(--color-error)"
+                }}>
+                  {uploadResult.message}
                 </div>
-              ) : (
-                <>
-                  <div className="max-h-96 overflow-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>번호</TableHead>
-                          <TableHead>정답</TableHead>
-                          <TableHead>배점</TableHead>
-                          <TableHead>상태</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {questions.map((q, i) => (
-                          <TableRow key={i}>
-                            <TableCell>{q.questionNumber}</TableCell>
-                            <TableCell>{q.answer}</TableCell>
-                            <TableCell>{q.score}</TableCell>
-                            <TableCell>
-                              {q.isValid ? (
-                                <CheckCircle className="h-4 w-4 text-green-500" />
-                              ) : (
-                                <div className="flex items-center gap-1 text-destructive">
-                                  <AlertCircle className="h-4 w-4" />
-                                  <span className="text-xs">
-                                    {q.errors?.join(", ")}
-                                  </span>
-                                </div>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-
-                  {uploadResult && (
-                    <div
-                      className={`mt-4 rounded-md p-3 text-sm ${
-                        uploadResult.success
-                          ? "bg-green-500/10 text-green-600"
-                          : "bg-destructive/10 text-destructive"
-                      }`}
-                    >
-                      {uploadResult.message}
-                    </div>
-                  )}
-
-                  <Button
-                    className="mt-4 w-full"
-                    onClick={handleUpload}
-                    disabled={
-                      !selectedExamId ||
-                      !selectedSubject ||
-                      validCount === 0 ||
-                      isUploading
-                    }
-                  >
-                    <Upload className="mr-2 h-4 w-4" />
-                    {isUploading
-                      ? "업로드 중..."
-                      : `${validCount}개 문제 업로드`}
-                  </Button>
-                </>
               )}
-            </CardContent>
-          </Card>
+
+              <button
+                className="gb-btn gb-btn-primary"
+                style={{ width: "100%", marginTop: "var(--space-6)", justifyContent: "center" }}
+                onClick={handleUpload}
+                disabled={!selectedExamId || !selectedSubject || validCount === 0 || isUploading}
+              >
+                <Upload style={{ width: 16, height: 16 }} />
+                {isUploading ? "업로드 중..." : `${validCount}개 문제 업로드`}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
