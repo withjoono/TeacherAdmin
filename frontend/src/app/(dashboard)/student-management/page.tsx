@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search,
-  ExternalLink,
   Loader2,
   Users,
   Calendar,
@@ -12,10 +11,8 @@ import {
   Eye,
   GraduationCap,
   BookOpen,
-  ChevronRight,
 } from "lucide-react";
 import { getLinkedAccounts, getMyClasses, setLinkClass, type LinkedAccount, type MentoringClass } from "@/lib/api/hub";
-import { APP_LABELS, openStudentApp } from "@/lib/app-viewer";
 
 export default function StudentManagementPage() {
   const router = useRouter();
@@ -173,28 +170,13 @@ export default function StudentManagementPage() {
                 </div>
               </div>
 
-              {/* 공유 앱 */}
+              {/* 공유 앱 수 표시 (뷰어에서 확인 가능) */}
               {student.sharedApps?.length > 0 && (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-1)", marginBottom: "var(--space-3)" }}>
-                  {student.sharedApps.map(appKey => {
-                    const label = APP_LABELS[appKey];
-                    return (
-                      <button
-                        key={appKey}
-                        onClick={(e) => { e.stopPropagation(); openStudentApp(appKey, student.partnerId); }}
-                        className="gb-badge gb-badge-info"
-                        style={{
-                          cursor: "pointer", border: "none", gap: 4,
-                          transition: "all var(--transition-fast)",
-                        }}
-                        title={`${label?.name || appKey} 열기`}
-                      >
-                        <span>{label?.emoji || '📱'}</span>
-                        <span>{label?.name || appKey}</span>
-                        <ExternalLink style={{ width: 10, height: 10, opacity: 0.5 }} />
-                      </button>
-                    );
-                  })}
+                  <span className="gb-badge gb-badge-info" style={{ gap: 4 }}>
+                    <BookOpen style={{ width: 12, height: 12 }} />
+                    연동 앱 {student.sharedApps.length}개
+                  </span>
                 </div>
               )}
 

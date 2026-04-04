@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
 import { SharedScheduleService } from './shared-schedule.service';
 
 @Injectable()
@@ -12,55 +11,24 @@ export class TutorService {
         private sharedSchedule: SharedScheduleService,
     ) { }
 
-    // ===== HELPER: Hub ID → TbUser 변환 =====
-    private async resolveTeacher(hubId: string) {
-        const hubUserId = parseInt(hubId, 10);
-        let user = await this.prisma.tbUser.findUnique({
-            where: { hubUserId },
-        });
-
-        if (!user) {
-            // 자동 생성 (첫 접속 시)
-            user = await this.prisma.tbUser.create({
-                data: {
-                    hubUserId,
-                    username: `teacher_${hubId}`,
-                    email: `teacher_${hubId}@tutorboard.local`,
-                    role: 'teacher',
-                },
-            });
-        }
-
-        return user;
-    }
-
     // ===== CLASS MANAGEMENT =====
 
-    async getTeacherDashboard(hubId: string) {
-        const user = await this.resolveTeacher(hubId);
-        const teacherId = user.id;
-
+    async getTeacherDashboard(teacherHubId: string) {
         const [classes, recentComments] = await Promise.all([
-            this.prisma.tbClass.findMany({
-                where: { teacherId },
+            this.prisma.mentoring_class_tb.findMany({
+                where: { teacher_id: teacherHubId, is_active: true },
                 include: {
-                    _count: { select: { enrollments: true, lessonPlans: true } },
-                    enrollments: {
-                        include: {
-                            student: { select: { id: true, username: true, avatarUrl: true } },
-                            parent: { select: { id: true, username: true } },
-                        },
-                    },
+                    _count: { select: { lessonPlans: true } },
                 },
-                orderBy: { createdAt: 'desc' },
+                orderBy: { created_at: 'desc' },
             }),
             this.prisma.tbPrivateComment.findMany({
                 where: {
-                    OR: [{ authorId: teacherId }, { targetId: teacherId }],
+                    OR: [{ authorId: teacherHubId }, { targetId: teacherHubId }],
                 },
                 include: {
-                    author: { select: { id: true, username: true, role: true } },
-                    target: { select: { id: true, username: true, role: true } },
+                    author: { select: { id: true, nickname: true, role_type: true } },
+                    target: { select: { id: true, nickname: true, role_type: true } },
                 },
                 orderBy: { createdAt: 'desc' },
                 take: 10,
@@ -70,51 +38,39 @@ export class TutorService {
         return { classes, recentComments };
     }
 
-    async getMyClasses(hubId: string) {
-        const user = await this.resolveTeacher(hubId);
-
-        return this.prisma.tbClass.findMany({
-            where: { teacherId: user.id },
-            include: {
-                _count: { select: { enrollments: true, lessonPlans: true } },
-                enrollments: {
-                    include: {
-                        student: { select: { id: true, username: true, avatarUrl: true } },
-                        parent: { select: { id: true, username: true } },
-                    },
-                },
-            },
-            orderBy: { createdAt: 'desc' },
+    async getMyClasses(teacherHubId: string) {
+        return this.prisma.mentoring_class_tb.findMany({
+            where: { teacher_id: teacherHubId, is_active: true },
+            orderBy: { created_at: 'desc' },
         });
     }
 
-    async getClassStudents(hubId: string, classId: string) {
-        const user = await this.resolveTeacher(hubId);
-        await this.verifyClassOwnership(user.id, classId);
+    async getClassStudents(teacherHubId: string, classIdStr: string) {
+        const classId = parseInt(classIdStr, 10);
+        await this.verifyClassOwnership(teacherHubId, classId);
 
-        return this.prisma.tbClassEnrollment.findMany({
-            where: { classId },
-            include: {
-                student: {
-                    select: {
-                        id: true, username: true, email: true, phone: true, avatarUrl: true,
-                        attendances: {
-                            where: { classId },
-                            orderBy: { date: 'desc' },
-                            take: 10,
-                        },
-                    },
-                },
-                parent: { select: { id: true, username: true, email: true, phone: true } },
-            },
+        const links = await this.prisma.mentoring_account_link_tb.findMany({
+            where: { class_id: classId },
         });
+
+        const studentIds = links.map(l => l.member_id === teacherHubId ? l.linked_member_id : l.member_id);
+
+        const authMembers = await this.prisma.auth_member.findMany({
+            where: { id: { in: studentIds } },
+            select: { id: true, nickname: true, email: true, phone: true }
+        });
+
+        return authMembers.map(student => ({
+            student: { ...student, username: student.nickname, avatarUrl: null },
+            parent: null
+        }));
     }
 
     // ===== LESSON PLANS =====
 
-    async getLessonPlans(hubId: string, classId: string) {
-        const user = await this.resolveTeacher(hubId);
-        await this.verifyClassOwnership(user.id, classId);
+    async getLessonPlans(teacherHubId: string, classIdStr: string) {
+        const classId = parseInt(classIdStr, 10);
+        await this.verifyClassOwnership(teacherHubId, classId);
 
         return this.prisma.tbLessonPlan.findMany({
             where: { classId },
@@ -124,7 +80,7 @@ export class TutorService {
                     include: {
                         submissions: {
                             include: {
-                                student: { select: { id: true, username: true } },
+                                student: { select: { id: true, nickname: true } },
                             },
                         },
                     },
@@ -133,7 +89,7 @@ export class TutorService {
                     include: {
                         results: {
                             include: {
-                                student: { select: { id: true, username: true } },
+                                student: { select: { id: true, nickname: true } },
                             },
                         },
                     },
@@ -143,11 +99,11 @@ export class TutorService {
         });
     }
 
-    async createLessonPlan(hubId: string, classId: string, data: {
+    async createLessonPlan(teacherHubId: string, classIdStr: string, data: {
         title: string; description?: string; scheduledDate?: string;
     }) {
-        const user = await this.resolveTeacher(hubId);
-        await this.verifyClassOwnership(user.id, classId);
+        const classId = parseInt(classIdStr, 10);
+        await this.verifyClassOwnership(teacherHubId, classId);
 
         return this.prisma.tbLessonPlan.create({
             data: {
@@ -159,11 +115,11 @@ export class TutorService {
         });
     }
 
-    async updateLessonPlan(hubId: string, classId: string, planId: string, data: {
+    async updateLessonPlan(teacherHubId: string, classIdStr: string, planId: string, data: {
         title?: string; description?: string; scheduledDate?: string; progress?: number;
     }) {
-        const user = await this.resolveTeacher(hubId);
-        await this.verifyClassOwnership(user.id, classId);
+        const classId = parseInt(classIdStr, 10);
+        await this.verifyClassOwnership(teacherHubId, classId);
 
         const updateData: any = {};
         if (data.title !== undefined) updateData.title = data.title;
@@ -177,9 +133,9 @@ export class TutorService {
         });
     }
 
-    async deleteLessonPlan(hubId: string, classId: string, planId: string) {
-        const user = await this.resolveTeacher(hubId);
-        await this.verifyClassOwnership(user.id, classId);
+    async deleteLessonPlan(teacherHubId: string, classIdStr: string, planId: string) {
+        const classId = parseInt(classIdStr, 10);
+        await this.verifyClassOwnership(teacherHubId, classId);
 
         return this.prisma.tbLessonPlan.delete({
             where: { id: planId },
@@ -188,12 +144,12 @@ export class TutorService {
 
     // ===== LESSON RECORDS =====
 
-    async createLessonRecord(hubId: string, classId: string, data: {
+    async createLessonRecord(teacherHubId: string, classIdStr: string, data: {
         lessonPlanId: string; recordDate: string; summary?: string;
         pagesFrom?: number; pagesTo?: number; conceptNote?: string; fileUrl?: string;
     }) {
-        const user = await this.resolveTeacher(hubId);
-        await this.verifyClassOwnership(user.id, classId);
+        const classId = parseInt(classIdStr, 10);
+        await this.verifyClassOwnership(teacherHubId, classId);
 
         return this.prisma.tbLessonRecord.create({
             data: {
@@ -210,12 +166,12 @@ export class TutorService {
 
     // ===== ATTENDANCE =====
 
-    async bulkCheckAttendance(hubId: string, classId: string, data: {
+    async bulkCheckAttendance(teacherHubId: string, classIdStr: string, data: {
         date: string;
         records: Array<{ studentId: string; status: 'present' | 'late' | 'absent'; note?: string }>;
     }) {
-        const user = await this.resolveTeacher(hubId);
-        await this.verifyClassOwnership(user.id, classId);
+        const classId = parseInt(classIdStr, 10);
+        await this.verifyClassOwnership(teacherHubId, classId);
 
         const date = new Date(data.date);
 
@@ -247,29 +203,34 @@ export class TutorService {
         return { updated: results.length };
     }
 
-    async getAttendance(hubId: string, classId: string, date?: string) {
-        const user = await this.resolveTeacher(hubId);
-        await this.verifyClassOwnership(user.id, classId);
+    async getAttendance(teacherHubId: string, classIdStr: string, date?: string) {
+        const classId = parseInt(classIdStr, 10);
+        await this.verifyClassOwnership(teacherHubId, classId);
 
         const where: any = { classId };
         if (date) where.date = new Date(date);
 
-        return this.prisma.tbAttendance.findMany({
+        const attendances = await this.prisma.tbAttendance.findMany({
             where,
             include: {
-                student: { select: { id: true, username: true, avatarUrl: true } },
+                student: { select: { id: true, nickname: true } },
             },
-            orderBy: [{ date: 'desc' }, { student: { username: 'asc' } }],
+            orderBy: [{ date: 'desc' }],
         });
+        
+        return attendances.map(a => ({
+            ...a,
+            student: { ...a.student, username: a.student.nickname, avatarUrl: null }
+        }));
     }
 
     // ===== TESTS =====
 
-    async createTest(hubId: string, classId: string, data: {
+    async createTest(teacherHubId: string, classIdStr: string, data: {
         lessonId: string; title: string; description?: string; testDate?: string; maxScore: number;
     }) {
-        const user = await this.resolveTeacher(hubId);
-        await this.verifyClassOwnership(user.id, classId);
+        const classId = parseInt(classIdStr, 10);
+        await this.verifyClassOwnership(teacherHubId, classId);
 
         const test = await this.prisma.tbTest.create({
             data: {
@@ -282,37 +243,33 @@ export class TutorService {
             include: { lesson: { include: { class: true } } },
         });
 
-        // 공유 스케줄 동기화
         if (test.lesson) {
-            const enrollments = await this.prisma.tbClassEnrollment.findMany({
-                where: { classId },
-                include: { student: { select: { hubUserId: true } } },
+            const links = await this.prisma.mentoring_account_link_tb.findMany({
+                where: { class_id: classId }
             });
-            for (const enrollment of enrollments) {
-                if (enrollment.student.hubUserId) {
-                    await this.sharedSchedule.syncTest(
-                        String(enrollment.student.hubUserId),
-                        test,
-                        test.lesson,
-                    );
-                }
+            for (const link of links) {
+                const studentId = link.member_id === teacherHubId ? link.linked_member_id : link.member_id;
+                await this.sharedSchedule.syncTest(
+                    String(studentId),
+                    test as any,
+                    test.lesson as any,
+                );
             }
         }
 
         return test;
     }
 
-    async bulkInputTestResults(hubId: string, testId: string, results: Array<{
+    async bulkInputTestResults(teacherHubId: string, testId: string, results: Array<{
         studentId: string; score: number; feedback?: string;
     }>) {
-        const user = await this.resolveTeacher(hubId);
         const test = await this.prisma.tbTest.findUnique({
             where: { id: testId },
             include: { lesson: { include: { class: true } } },
         });
 
         if (!test) throw new NotFoundException('Test not found');
-        await this.verifyClassOwnership(user.id, test.lesson.classId);
+        await this.verifyClassOwnership(teacherHubId, test.lesson.classId);
 
         const upsertResults = await Promise.all(
             results.map((r) =>
@@ -327,32 +284,36 @@ export class TutorService {
         return { updated: upsertResults.length };
     }
 
-    async getTestResults(hubId: string, testId: string) {
-        const user = await this.resolveTeacher(hubId);
+    async getTestResults(teacherHubId: string, testId: string) {
         const test = await this.prisma.tbTest.findUnique({
             where: { id: testId },
             include: { lesson: { include: { class: true } } },
         });
 
         if (!test) throw new NotFoundException('Test not found');
-        await this.verifyClassOwnership(user.id, test.lesson.classId);
+        await this.verifyClassOwnership(teacherHubId, test.lesson.classId);
 
-        return this.prisma.tbTestResult.findMany({
+        const results = await this.prisma.tbTestResult.findMany({
             where: { testId },
             include: {
-                student: { select: { id: true, username: true, avatarUrl: true } },
+                student: { select: { id: true, nickname: true } },
             },
             orderBy: { score: 'desc' },
         });
+        
+        return results.map(r => ({
+            ...r,
+            student: { ...r.student, username: r.student.nickname, avatarUrl: null }
+        }));
     }
 
     // ===== ASSIGNMENTS =====
 
-    async createAssignment(hubId: string, classId: string, data: {
+    async createAssignment(teacherHubId: string, classIdStr: string, data: {
         lessonId: string; title: string; description?: string; dueDate?: string; fileUrl?: string;
     }) {
-        const user = await this.resolveTeacher(hubId);
-        await this.verifyClassOwnership(user.id, classId);
+        const classId = parseInt(classIdStr, 10);
+        await this.verifyClassOwnership(teacherHubId, classId);
 
         const assignment = await this.prisma.tbAssignment.create({
             data: {
@@ -365,56 +326,56 @@ export class TutorService {
             include: { lesson: { include: { class: true } } },
         });
 
-        // 공유 스케줄 동기화
         if (assignment.lesson) {
-            const enrollments = await this.prisma.tbClassEnrollment.findMany({
-                where: { classId },
-                include: { student: { select: { hubUserId: true } } },
+            const links = await this.prisma.mentoring_account_link_tb.findMany({
+                where: { class_id: classId }
             });
-            for (const enrollment of enrollments) {
-                if (enrollment.student.hubUserId) {
-                    await this.sharedSchedule.syncAssignment(
-                        String(enrollment.student.hubUserId),
-                        assignment,
-                        assignment.lesson,
-                    );
-                }
+            for (const link of links) {
+                const studentId = link.member_id === teacherHubId ? link.linked_member_id : link.member_id;
+                await this.sharedSchedule.syncAssignment(
+                    String(studentId),
+                    assignment as any,
+                    assignment.lesson as any,
+                );
             }
         }
 
         return assignment;
     }
 
-    async getAssignmentSubmissions(hubId: string, assignmentId: string) {
-        const user = await this.resolveTeacher(hubId);
+    async getAssignmentSubmissions(teacherHubId: string, assignmentId: string) {
         const assignment = await this.prisma.tbAssignment.findUnique({
             where: { id: assignmentId },
             include: { lesson: { include: { class: true } } },
         });
 
         if (!assignment) throw new NotFoundException('Assignment not found');
-        await this.verifyClassOwnership(user.id, assignment.lesson.classId);
+        await this.verifyClassOwnership(teacherHubId, assignment.lesson.classId);
 
-        return this.prisma.tbAssignmentSubmission.findMany({
+        const submissions = await this.prisma.tbAssignmentSubmission.findMany({
             where: { assignmentId },
             include: {
-                student: { select: { id: true, username: true, avatarUrl: true } },
+                student: { select: { id: true, nickname: true } },
             },
             orderBy: { submittedAt: 'desc' },
         });
+        
+        return submissions.map(s => ({
+            ...s,
+            student: { ...s.student, username: s.student.nickname, avatarUrl: null }
+        }));
     }
 
-    async gradeSubmission(hubId: string, submissionId: string, data: {
+    async gradeSubmission(teacherHubId: string, submissionId: string, data: {
         grade?: number; feedback?: string; status?: string;
     }) {
-        const user = await this.resolveTeacher(hubId);
         const submission = await this.prisma.tbAssignmentSubmission.findUnique({
             where: { id: submissionId },
             include: { assignment: { include: { lesson: { include: { class: true } } } } },
         });
 
         if (!submission) throw new NotFoundException('Submission not found');
-        await this.verifyClassOwnership(user.id, submission.assignment.lesson.classId);
+        await this.verifyClassOwnership(teacherHubId, submission.assignment.lesson.classId);
 
         return this.prisma.tbAssignmentSubmission.update({
             where: { id: submissionId },
@@ -429,61 +390,44 @@ export class TutorService {
     // ===== STUDENT DATA VIEWING (선생님이 학생 앱 데이터 열람) =====
 
     /**
-     * 선생님이 해당 학생에게 접근 가능한지 검증
-     * (선생님의 클래스에 등록된 학생인지 확인)
+     * 선생님이 해당 학생에게 접근 가능한지 검증 (Hub 계정 연동 테이블 사용)
      */
-    private async verifyStudentAccess(teacherId: string, studentId: string) {
-        const enrollment = await this.prisma.tbClassEnrollment.findFirst({
+    private async verifyStudentAccess(teacherHubId: string, studentId: string) {
+        const links = await this.prisma.mentoring_account_link_tb.findMany({
             where: {
-                studentId,
-                class: { teacherId },
-            },
-            include: {
-                student: {
-                    select: { id: true, username: true, email: true, phone: true, avatarUrl: true },
-                },
-                class: {
-                    select: { id: true, name: true, subject: true },
-                },
-            },
+                OR: [
+                    { member_id: teacherHubId, linked_member_id: studentId },
+                    { member_id: studentId, linked_member_id: teacherHubId }
+                ]
+            }
         });
 
-        if (!enrollment) {
+        if (links.length === 0) {
             throw new ForbiddenException('이 학생에 대한 접근 권한이 없습니다.');
         }
 
-        return enrollment;
+        return links;
     }
 
     /**
      * 학생 학습 요약 (Overview)
-     * - 기본 정보, 소속 클래스, 과제/시험/출석 요약 통계
      */
-    async getStudentOverview(hubId: string, studentId: string) {
-        const user = await this.resolveTeacher(hubId);
-        await this.verifyStudentAccess(user.id, studentId);
+    async getStudentOverview(teacherHubId: string, studentId: string) {
+        const links = await this.verifyStudentAccess(teacherHubId, studentId);
 
-        const student = await this.prisma.tbUser.findUnique({
+        const student = await this.prisma.auth_member.findUnique({
             where: { id: studentId },
-            select: { id: true, username: true, email: true, phone: true, avatarUrl: true },
+            select: { id: true, nickname: true, email: true, phone: true },
         });
 
         if (!student) throw new NotFoundException('학생을 찾을 수 없습니다.');
 
-        // 이 선생님의 클래스에서 해당 학생의 등록 정보
-        const enrollments = await this.prisma.tbClassEnrollment.findMany({
-            where: {
-                studentId,
-                class: { teacherId: user.id },
-            },
-            include: {
-                class: { select: { id: true, name: true, subject: true } },
-            },
+        const classIds = links.filter(l => l.class_id).map(l => l.class_id as number);
+
+        const classes = await this.prisma.mentoring_class_tb.findMany({
+            where: { id: { in: classIds } }
         });
 
-        const classIds = enrollments.map((e) => e.classId);
-
-        // 과제 제출 통계
         const [totalAssignments, submittedAssignments] = await Promise.all([
             this.prisma.tbAssignment.count({
                 where: { lesson: { classId: { in: classIds } } },
@@ -493,7 +437,6 @@ export class TutorService {
             }),
         ]);
 
-        // 시험 통계
         const testResults = await this.prisma.tbTestResult.findMany({
             where: { studentId, test: { lesson: { classId: { in: classIds } } } },
             include: { test: { select: { maxScore: true, title: true } } },
@@ -505,7 +448,6 @@ export class TutorService {
             ? Math.round(testResults.reduce((sum, r) => sum + (r.score / r.test.maxScore) * 100, 0) / testResults.length)
             : null;
 
-        // 출석 통계 (최근 30일)
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -524,14 +466,13 @@ export class TutorService {
             absent: attendances.filter((a) => a.status === 'absent').length,
         };
 
-        // 최근 코멘트 수
         const commentCount = await this.prisma.tbPrivateComment.count({
             where: { studentId },
         });
 
         return {
-            student,
-            classes: enrollments.map((e) => e.class),
+            student: { ...student, username: student.nickname, avatarUrl: null },
+            classes: classes.map(c => ({ ...c, name: c.name, subject: c.subject })),
             stats: {
                 assignments: { total: totalAssignments, submitted: submittedAssignments },
                 tests: { count: testResults.length, avgScore, recentResults: testResults },
@@ -544,14 +485,9 @@ export class TutorService {
     /**
      * 학생의 과제 목록 및 제출 현황
      */
-    async getStudentAssignments(hubId: string, studentId: string) {
-        const user = await this.resolveTeacher(hubId);
-        await this.verifyStudentAccess(user.id, studentId);
-
-        const classIds = (await this.prisma.tbClassEnrollment.findMany({
-            where: { studentId, class: { teacherId: user.id } },
-            select: { classId: true },
-        })).map((e) => e.classId);
+    async getStudentAssignments(teacherHubId: string, studentId: string) {
+        const links = await this.verifyStudentAccess(teacherHubId, studentId);
+        const classIds = links.filter(l => l.class_id).map(l => l.class_id as number);
 
         return this.prisma.tbAssignment.findMany({
             where: { lesson: { classId: { in: classIds } } },
@@ -574,14 +510,9 @@ export class TutorService {
     /**
      * 학생의 시험 결과
      */
-    async getStudentTests(hubId: string, studentId: string) {
-        const user = await this.resolveTeacher(hubId);
-        await this.verifyStudentAccess(user.id, studentId);
-
-        const classIds = (await this.prisma.tbClassEnrollment.findMany({
-            where: { studentId, class: { teacherId: user.id } },
-            select: { classId: true },
-        })).map((e) => e.classId);
+    async getStudentTests(teacherHubId: string, studentId: string) {
+        const links = await this.verifyStudentAccess(teacherHubId, studentId);
+        const classIds = links.filter(l => l.class_id).map(l => l.class_id as number);
 
         return this.prisma.tbTest.findMany({
             where: { lesson: { classId: { in: classIds } } },
@@ -604,35 +535,36 @@ export class TutorService {
     /**
      * 학생의 출석 기록
      */
-    async getStudentAttendance(hubId: string, studentId: string) {
-        const user = await this.resolveTeacher(hubId);
-        await this.verifyStudentAccess(user.id, studentId);
+    async getStudentAttendance(teacherHubId: string, studentId: string) {
+        const links = await this.verifyStudentAccess(teacherHubId, studentId);
+        const classIds = links.filter(l => l.class_id).map(l => l.class_id as number);
 
-        const classIds = (await this.prisma.tbClassEnrollment.findMany({
-            where: { studentId, class: { teacherId: user.id } },
-            select: { classId: true },
-        })).map((e) => e.classId);
-
-        return this.prisma.tbAttendance.findMany({
+        const attendances = await this.prisma.tbAttendance.findMany({
             where: { studentId, classId: { in: classIds } },
             include: {
                 class: { select: { name: true, subject: true } },
             },
             orderBy: { date: 'desc' },
         });
+        
+        return attendances.map(a => ({
+           id: a.id,
+           date: a.date,
+           status: a.status,
+           note: a.note,
+           class: a.class 
+        }));
     }
 
     // ===== PRIVATE COMMENTS =====
 
-    async createPrivateComment(hubId: string, data: {
+    async createPrivateComment(teacherHubId: string, data: {
         targetId: string; studentId?: string; contextType?: string;
         contextId?: string; content: string; imageUrl?: string;
     }) {
-        const user = await this.resolveTeacher(hubId);
-
         return this.prisma.tbPrivateComment.create({
             data: {
-                authorId: user.id,
+                authorId: teacherHubId,
                 targetId: data.targetId,
                 studentId: data.studentId,
                 contextType: data.contextType,
@@ -641,156 +573,51 @@ export class TutorService {
                 imageUrl: data.imageUrl,
             },
             include: {
-                author: { select: { id: true, username: true, role: true } },
-                target: { select: { id: true, username: true, role: true } },
+                author: { select: { id: true, nickname: true, role_type: true } },
+                target: { select: { id: true, nickname: true, role_type: true } },
             },
         });
     }
 
-    async getPrivateComments(hubId: string, studentId: string) {
-        const user = await this.resolveTeacher(hubId);
-
-        return this.prisma.tbPrivateComment.findMany({
+    async getPrivateComments(teacherHubId: string, studentId: string) {
+        const comments = await this.prisma.tbPrivateComment.findMany({
             where: {
                 studentId,
-                OR: [{ authorId: user.id }, { targetId: user.id }],
+                OR: [{ authorId: teacherHubId }, { targetId: teacherHubId }],
             },
             include: {
-                author: { select: { id: true, username: true, role: true, avatarUrl: true } },
-                target: { select: { id: true, username: true, role: true } },
+                author: { select: { id: true, nickname: true, role_type: true } },
+                target: { select: { id: true, nickname: true, role_type: true } },
             },
             orderBy: { createdAt: 'asc' },
         });
+        
+        return comments.map(c => ({
+            ...c,
+            author: { ...c.author, username: c.author.nickname, role: c.author.role_type, avatarUrl: null },
+            target: { ...c.target, username: c.target.nickname, role: c.target.role_type, avatarUrl: null }
+        }));
     }
 
-    // ===== CLASS REQUESTS =====
+    // ===== CLASS REQUESTS (removed logic) =====
 
-    async getClassRequests(hubId: string) {
-        const user = await this.resolveTeacher(hubId);
-
-        return this.prisma.tbClassRequest.findMany({
-            where: { teacherId: user.id },
-            include: {
-                requester: { select: { id: true, username: true, email: true, role: true, avatarUrl: true } },
-                class: { select: { id: true, name: true, subject: true } },
-            },
-            orderBy: [
-                { status: 'asc' }, // pending first
-                { createdAt: 'desc' },
-            ],
-        });
+    async getClassRequests(_hubId: string) {
+        return [];
     }
 
-    async respondToClassRequest(hubId: string, requestId: string, data: {
-        action: 'accepted' | 'rejected';
-        className?: string;
-        subject?: string;
-        existingClassId?: string;
-    }) {
-        const user = await this.resolveTeacher(hubId);
-
-        const request = await this.prisma.tbClassRequest.findUnique({
-            where: { id: requestId },
-            include: { requester: true },
-        });
-
-        if (!request) throw new NotFoundException('요청을 찾을 수 없습니다.');
-        if (request.teacherId !== user.id) throw new ForbiddenException('이 요청에 대한 권한이 없습니다.');
-        if (request.status !== 'pending') throw new ForbiddenException('이미 처리된 요청입니다.');
-
-        if (data.action === 'accepted') {
-            let classId: string;
-
-            if (data.existingClassId) {
-                // 기존 반에 배정
-                await this.verifyClassOwnership(user.id, data.existingClassId);
-                classId = data.existingClassId;
-            } else {
-                // 새 반 개설
-                const inviteCode = Math.random().toString(36).substring(2, 10).toUpperCase();
-                const newClass = await this.prisma.tbClass.create({
-                    data: {
-                        teacherId: user.id,
-                        name: data.className || `${request.subject || '수업'} - ${request.requester.username}`,
-                        subject: data.subject || request.subject || '기타',
-                        inviteCode,
-                    },
-                });
-                classId = newClass.id;
-            }
-
-            // 학생 등록
-            await this.prisma.tbClassEnrollment.upsert({
-                where: {
-                    classId_studentId: {
-                        classId,
-                        studentId: request.requesterId,
-                    },
-                },
-                create: {
-                    classId,
-                    studentId: request.requesterId,
-                },
-                update: {},
-            });
-
-            // 요청 상태 업데이트
-            await this.prisma.tbClassRequest.update({
-                where: { id: requestId },
-                data: {
-                    status: 'accepted',
-                    classId,
-                    respondedAt: new Date(),
-                },
-            });
-
-            // 학생에게 알림
-            const cls = await this.prisma.tbClass.findUnique({ where: { id: classId } });
-            await this.prisma.tbNotification.create({
-                data: {
-                    userId: request.requesterId,
-                    message: `📚 [${cls?.name}]에 등록되었습니다! 수업 현황을 확인하세요.`,
-                    type: 'general',
-                    referenceId: classId,
-                    referenceType: 'class',
-                },
-            });
-
-            return { status: 'accepted', classId };
-        } else {
-            // 거절
-            await this.prisma.tbClassRequest.update({
-                where: { id: requestId },
-                data: {
-                    status: 'rejected',
-                    respondedAt: new Date(),
-                },
-            });
-
-            // 요청자에게 알림
-            await this.prisma.tbNotification.create({
-                data: {
-                    userId: request.requesterId,
-                    message: `수업 요청이 거절되었습니다. 선생님에게 문의해 주세요.`,
-                    type: 'general',
-                    referenceId: requestId,
-                    referenceType: 'class_request',
-                },
-            });
-
-            return { status: 'rejected' };
-        }
+    async respondToClassRequest(_hubId: string, _requestId: string, _data: any) {
+        throw new ForbiddenException('Use Hub System for requests.');
     }
 
     // ===== HELPERS =====
 
-    private async verifyClassOwnership(teacherId: string, classId: string) {
-        const cls = await this.prisma.tbClass.findUnique({
+    private async verifyClassOwnership(teacherHubId: string, classId: number) {
+        const cls = await this.prisma.mentoring_class_tb.findUnique({
             where: { id: classId },
-            select: { teacherId: true },
+            select: { teacher_id: true },
         });
 
         if (!cls) throw new NotFoundException('Class not found');
-        if (cls.teacherId !== teacherId) throw new ForbiddenException('Not your class');
+        if (cls.teacher_id !== teacherHubId) throw new ForbiddenException('Not your class');
     }
 }

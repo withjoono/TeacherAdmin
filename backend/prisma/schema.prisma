@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["teacher_admin", "hub", "tutorboard"]
+  schemas  = ["teacher_admin", "hub", "tutorboard", "susi", "jungsi", "mysanggibu"]
 }
 
 /// 아레나 클래스 (반/그룹)
@@ -111,6 +111,14 @@ model auth_member {
   update_dt             DateTime?       @db.Timestamp(6)
 
   auth_member_s         auth_member_s?
+  
+  // Back relations for TutorBoard tables
+  attendances          TbAttendance[]
+  submissions          TbAssignmentSubmission[]
+  testResults          TbTestResult[]
+  studentPayments      TbPayment[]
+  sentComments         TbPrivateComment[]    @relation("CommentAuthor")
+  receivedComments     TbPrivateComment[]    @relation("CommentTarget")
 
   @@index([email, phone], map: "idx_auth_member_email_phone")
   @@schema("hub")
@@ -142,6 +150,11 @@ model mentoring_class_tb {
   is_active   Boolean  @default(true)
   created_at  DateTime @default(now()) @db.Timestamp()
 
+  // Back relations for TutorBoard tables
+  lessonPlans TbLessonPlan[]
+  attendances TbAttendance[]
+  payments    TbPayment[]
+
   @@index([teacher_id])
   @@schema("hub")
 }
@@ -160,23 +173,8 @@ model mentoring_account_link_tb {
   @@index([linked_member_id])
   @@schema("hub")
 }
+
 // ===== TUTORBOARD ENUMS =====
-
-enum UserRole {
-  teacher
-  parent
-  student
-
-  @@schema("tutorboard")
-}
-
-enum ClassRequestStatus {
-  pending
-  accepted
-  rejected
-
-  @@schema("tutorboard")
-}
 
 enum SubmissionStatus {
   pending
@@ -194,17 +192,6 @@ enum PaymentStatus {
   @@schema("tutorboard")
 }
 
-enum NotificationType {
-  assignment
-  test
-  payment
-  attendance
-  comment
-  general
-
-  @@schema("tutorboard")
-}
-
 enum AttendanceStatus {
   present
   late
@@ -213,85 +200,12 @@ enum AttendanceStatus {
   @@schema("tutorboard")
 }
 
-// ===== TUTORBOARD USERS =====
-
-model TbUser {
-  id         String   @id @default(uuid())
-  hubUserId  Int?     @unique @map("hub_user_id")
-  username   String
-  email      String   @unique
-  role       UserRole
-  phone      String?
-  avatarUrl  String?  @map("avatar_url")
-  createdAt  DateTime @default(now()) @map("created_at")
-
-  // Relations
-  teacherClasses       TbClass[]
-  studentEnrollments   TbClassEnrollment[] @relation("StudentEnrollments")
-  parentEnrollments    TbClassEnrollment[] @relation("ParentEnrollments")
-  submissions          TbAssignmentSubmission[]
-  testResults          TbTestResult[]
-  studentPayments      TbPayment[]
-  notifications        TbNotification[]
-  badges               TbStudentBadge[]
-  attendances          TbAttendance[]
-  sentComments         TbPrivateComment[]    @relation("CommentAuthor")
-  receivedComments     TbPrivateComment[]    @relation("CommentTarget")
-  sentMessages         TbMessage[]
-  sentRequests         TbClassRequest[]      @relation("RequestSender")
-  receivedRequests     TbClassRequest[]      @relation("RequestReceiver")
-
-  @@map("tb_users")
-  @@schema("tutorboard")
-}
-
-// ===== TUTORBOARD CLASSES =====
-
-model TbClass {
-  id          String   @id @default(uuid())
-  teacherId   String   @map("teacher_id")
-  name        String
-  subject     String   @default("기타")
-  description String?
-  inviteCode  String   @unique @map("invite_code")
-  startDate   DateTime? @map("start_date")
-  endDate     DateTime? @map("end_date")
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  // Relations
-  teacher     TbUser         @relation(fields: [teacherId], references: [id])
-  enrollments TbClassEnrollment[]
-  lessonPlans TbLessonPlan[]
-  payments    TbPayment[]
-  attendances TbAttendance[]
-  classRequests TbClassRequest[]
-
-  @@map("tb_classes")
-  @@schema("tutorboard")
-}
-
-model TbClassEnrollment {
-  id         String   @id @default(uuid())
-  classId    String   @map("class_id")
-  studentId  String   @map("student_id")
-  parentId   String?  @map("parent_id")
-  enrolledAt DateTime @default(now()) @map("enrolled_at")
-
-  // Relations
-  class   TbClass @relation(fields: [classId], references: [id])
-  student TbUser  @relation("StudentEnrollments", fields: [studentId], references: [id])
-  parent  TbUser? @relation("ParentEnrollments", fields: [parentId], references: [id])
-
-  @@unique([classId, studentId])
-  @@map("tb_class_enrollments")
-  @@schema("tutorboard")
-}
 
 // ===== TUTORBOARD LESSON PLANS & RECORDS =====
 
 model TbLessonPlan {
   id            String   @id @default(uuid())
-  classId       String   @map("class_id")
+  classId       Int      @map("class_id")
   title         String
   description   String?
   scheduledDate DateTime? @map("scheduled_date")
@@ -299,7 +213,7 @@ model TbLessonPlan {
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   // Relations
-  class       TbClass          @relation(fields: [classId], references: [id])
+  class       mentoring_class_tb @relation(fields: [classId], references: [id])
   assignments TbAssignment[]
   tests       TbTest[]
   records     TbLessonRecord[]
@@ -330,16 +244,16 @@ model TbLessonRecord {
 
 model TbAttendance {
   id        String           @id @default(uuid())
-  classId   String           @map("class_id")
-  studentId String           @map("student_id")
+  classId   Int              @map("class_id")
+  studentId String           @map("student_id") @db.VarChar(30)
   date      DateTime
   status    AttendanceStatus @default(present)
   note      String?
   createdAt DateTime         @default(now()) @map("created_at")
 
   // Relations
-  class   TbClass @relation(fields: [classId], references: [id])
-  student TbUser  @relation(fields: [studentId], references: [id])
+  class   mentoring_class_tb @relation(fields: [classId], references: [id])
+  student auth_member        @relation(fields: [studentId], references: [id])
 
   @@unique([classId, studentId, date])
   @@map("tb_attendances")
@@ -368,7 +282,7 @@ model TbAssignment {
 model TbAssignmentSubmission {
   id                String           @id @default(uuid())
   assignmentId      String           @map("assignment_id")
-  studentId         String           @map("student_id")
+  studentId         String           @map("student_id") @db.VarChar(30)
   submissionFileUrl String?          @map("submission_file_url")
   feedback          String?
   grade             Int?
@@ -377,7 +291,7 @@ model TbAssignmentSubmission {
 
   // Relations
   assignment TbAssignment @relation(fields: [assignmentId], references: [id])
-  student    TbUser       @relation(fields: [studentId], references: [id])
+  student    auth_member  @relation(fields: [studentId], references: [id])
 
   @@unique([assignmentId, studentId])
   @@map("tb_assignment_submissions")
@@ -406,15 +320,15 @@ model TbTest {
 model TbTestResult {
   id              String   @id @default(uuid())
   testId          String   @map("test_id")
-  studentId       String   @map("student_id")
+  studentId       String   @map("student_id") @db.VarChar(30)
   score           Int
   feedback        String?
   wrongAnswerNote String?  @map("wrong_answer_note")
   takenAt         DateTime @default(now()) @map("taken_at")
 
   // Relations
-  test    TbTest @relation(fields: [testId], references: [id])
-  student TbUser @relation(fields: [studentId], references: [id])
+  test    TbTest       @relation(fields: [testId], references: [id])
+  student auth_member  @relation(fields: [studentId], references: [id])
 
   @@unique([testId, studentId])
   @@map("tb_test_results")
@@ -425,8 +339,8 @@ model TbTestResult {
 
 model TbPayment {
   id         String        @id @default(uuid())
-  classId    String        @map("class_id")
-  studentId  String        @map("student_id")
+  classId    Int           @map("class_id")
+  studentId  String        @map("student_id") @db.VarChar(30)
   amount     Decimal
   dueDate    DateTime      @map("due_date")
   paidDate   DateTime?     @map("paid_date")
@@ -435,29 +349,10 @@ model TbPayment {
   createdAt  DateTime      @default(now()) @map("created_at")
 
   // Relations
-  class   TbClass @relation(fields: [classId], references: [id])
-  student TbUser  @relation(fields: [studentId], references: [id])
+  class   mentoring_class_tb @relation(fields: [classId], references: [id])
+  student auth_member        @relation(fields: [studentId], references: [id])
 
   @@map("tb_payments")
-  @@schema("tutorboard")
-}
-
-// ===== TUTORBOARD NOTIFICATIONS =====
-
-model TbNotification {
-  id            String           @id @default(uuid())
-  userId        String           @map("user_id")
-  message       String
-  type          NotificationType @default(general)
-  read          Boolean          @default(false)
-  referenceId   String?          @map("reference_id")
-  referenceType String?          @map("reference_type")
-  sentAt        DateTime         @default(now()) @map("sent_at")
-
-  // Relations
-  user TbUser @relation(fields: [userId], references: [id])
-
-  @@map("tb_notifications")
   @@schema("tutorboard")
 }
 
@@ -465,9 +360,9 @@ model TbNotification {
 
 model TbPrivateComment {
   id          String   @id @default(uuid())
-  authorId    String   @map("author_id")
-  targetId    String   @map("target_id")
-  studentId   String?  @map("student_id")
+  authorId    String   @map("author_id") @db.VarChar(30)
+  targetId    String   @map("target_id") @db.VarChar(30)
+  studentId   String?  @map("student_id") @db.VarChar(30) // optional Context
   contextType String?  @map("context_type")
   contextId   String?  @map("context_id")
   content     String
@@ -475,63 +370,10 @@ model TbPrivateComment {
   createdAt   DateTime @default(now()) @map("created_at")
 
   // Relations
-  author TbUser @relation("CommentAuthor", fields: [authorId], references: [id])
-  target TbUser @relation("CommentTarget", fields: [targetId], references: [id])
+  author auth_member @relation("CommentAuthor", fields: [authorId], references: [id])
+  target auth_member @relation("CommentTarget", fields: [targetId], references: [id])
 
   @@map("tb_private_comments")
-  @@schema("tutorboard")
-}
-
-// ===== TUTORBOARD MESSAGING =====
-
-model TbConversation {
-  id        String   @id @default(uuid())
-  teacherId String   @map("teacher_id")
-  parentId  String   @map("parent_id")
-  studentId String?  @map("student_id")
-  title     String?
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  messages TbMessage[]
-
-  @@unique([teacherId, parentId, studentId])
-  @@map("tb_conversations")
-  @@schema("tutorboard")
-}
-
-model TbMessage {
-  id             String   @id @default(uuid())
-  conversationId String   @map("conversation_id")
-  senderId       String   @map("sender_id")
-  content        String
-  contextType    String?  @map("context_type")
-  contextId      String?  @map("context_id")
-  read           Boolean  @default(false)
-  sentAt         DateTime @default(now()) @map("sent_at")
-
-  // Relations
-  conversation TbConversation @relation(fields: [conversationId], references: [id])
-  sender       TbUser         @relation(fields: [senderId], references: [id])
-
-  @@map("tb_messages")
-  @@schema("tutorboard")
-}
-
-// ===== TUTORBOARD BADGES =====
-
-model TbStudentBadge {
-  id        String   @id @default(uuid())
-  studentId String   @map("student_id")
-  badgeType String   @map("badge_type")
-  badgeName String   @map("badge_name")
-  earnedAt  DateTime @default(now()) @map("earned_at")
-
-  // Relations
-  student TbUser @relation(fields: [studentId], references: [id])
-
-  @@map("tb_student_badges")
   @@schema("tutorboard")
 }
 
@@ -558,26 +400,4 @@ model HubSharedSchedule {
   @@index([hubUserId, eventDate], name: "idx_hub_schedule_date")
   @@map("hub_shared_schedule")
   @@schema("hub")
-}
-
-// ===== CLASS REQUESTS (Student/Parent → Teacher) =====
-
-model TbClassRequest {
-  id          String             @id @default(uuid())
-  requesterId String             @map("requester_id")
-  teacherId   String             @map("teacher_id")
-  subject     String?
-  message     String?
-  status      ClassRequestStatus @default(pending)
-  classId     String?            @map("class_id")
-  createdAt   DateTime           @default(now()) @map("created_at")
-  respondedAt DateTime?          @map("responded_at")
-
-  // Relations
-  requester TbUser   @relation("RequestSender", fields: [requesterId], references: [id])
-  teacher   TbUser   @relation("RequestReceiver", fields: [teacherId], references: [id])
-  class     TbClass? @relation(fields: [classId], references: [id])
-
-  @@map("tb_class_requests")
-  @@schema("tutorboard")
 }

@@ -5,8 +5,9 @@ const HUB_API_URL = config.hubApiUrl;
 const SERVICE_ID = 'teacheradmin';
 
 export function redirectToHubLogin() {
-    const currentUrl = window.location.href;
-    window.location.href = `${HUB_URL}/auth/login?redirect=${encodeURIComponent(currentUrl)}`;
+    // 로그인/회원가입 후 항상 대시보드로 리다이렉트
+    const dashboardUrl = `${window.location.origin}/dashboard`;
+    window.location.href = `${HUB_URL}/auth/login?redirect=${encodeURIComponent(dashboardUrl)}`;
 }
 
 /**

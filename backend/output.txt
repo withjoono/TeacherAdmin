@@ -1,0 +1,7 @@
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "geobukschool_dev", schemas "hub, teacher_admin, tutorboard" at "127.0.0.1:5432"
+
+Error: P1001: Can't reach database server at `127.0.0.1:5432`
+
+Please make sure your database server is running at `127.0.0.1:5432`.
