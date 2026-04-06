@@ -7,10 +7,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuthStore } from "@/lib/auth";
 import { authApi } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "geobuk-shared/ui";
+import { Input } from "geobuk-shared/ui";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "geobuk-shared/ui";
 
 const loginSchema = z.object({
   email: z.string().email("올바른 이메일을 입력해주세요"),
@@ -159,3 +159,4 @@ export default function LoginPage() {
     </Suspense>
   );
 }
+

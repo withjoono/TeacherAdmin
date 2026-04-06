@@ -3,8 +3,8 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Header } from "@/components/layout/header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "geobuk-shared/ui";
+import { Button } from "geobuk-shared/ui";
 import {
     ArrowLeft,
     Loader2,
@@ -268,3 +268,4 @@ export default function ClassStatsPage() {
         </Suspense>
     );
 }
+

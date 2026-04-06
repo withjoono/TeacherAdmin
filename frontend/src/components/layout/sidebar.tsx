@@ -23,12 +23,13 @@ import { WonCircle } from "@/components/icons";
 import { config } from "@/lib/config";
 import { useAuthStore } from "@/lib/auth";
 import { logout as logoutApi } from "@/lib/api/auth";
+import { getAccessToken, getRefreshToken } from "geobuk-shared/auth";
 
 /** Hub URL에 SSO 토큰을 포함시켜 자동 로그인 지원 */
 function getHubUrl(path: string): string {
   const base = `${config.hubUrl}${path}`;
-  const accessToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-  const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
+  const accessToken = typeof window !== 'undefined' ? getAccessToken() : null;
+  const refreshToken = typeof window !== 'undefined' ? getRefreshToken() : null;
   if (!accessToken) return base;
   const url = new URL(base);
   url.searchParams.set('sso_access_token', accessToken);

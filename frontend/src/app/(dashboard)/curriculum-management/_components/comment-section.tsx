@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "geobuk-shared/ui";
+import { Input } from "geobuk-shared/ui";
 import { Send, MessageCircle } from "lucide-react";
 import type { LessonComment } from "@/lib/api/curriculum";
 import { getComments, addComment } from "@/lib/api/curriculum";
@@ -145,3 +145,4 @@ export function CommentSection({ lessonRecordId }: CommentSectionProps) {
         </div>
     );
 }
+

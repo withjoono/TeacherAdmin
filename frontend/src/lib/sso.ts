@@ -1,4 +1,5 @@
 import { config } from './config';
+import { setTokens } from 'geobuk-shared/auth';
 
 const HUB_URL = config.hubUrl;
 const HUB_API_URL = config.hubApiUrl;
@@ -33,10 +34,7 @@ export async function processSSOLogin(): Promise<{ accessToken: string; refreshT
         const data = result.data || result;
 
         if (data.accessToken) {
-            localStorage.setItem('accessToken', data.accessToken);
-            if (data.refreshToken) {
-                localStorage.setItem('refreshToken', data.refreshToken);
-            }
+            setTokens(data.accessToken, data.refreshToken || '');
 
             // Clean up URL
             const url = new URL(window.location.href);

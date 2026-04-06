@@ -4,6 +4,7 @@
  */
 
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { getAccessToken, getRefreshToken, setTokens, clearTokens, hasTokens as geobukHasTokens } from 'geobuk-shared/auth';
 import { config } from '../config';
 
 /**
@@ -34,37 +35,12 @@ export const authClient = axios.create({
 
 // 토큰 관리 함수들
 export const tokenManager = {
-  getAccessToken: () => {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem('accessToken');
-  },
-
-  getRefreshToken: () => {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem('refreshToken');
-  },
-
-  setTokens: (accessToken: string, refreshToken: string) => {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
-  },
-
-  setAccessToken: (accessToken: string) => {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem('accessToken', accessToken);
-  },
-
-  clearTokens: () => {
-    if (typeof window === 'undefined') return;
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-  },
-
-  hasTokens: () => {
-    if (typeof window === 'undefined') return false;
-    return !!(localStorage.getItem('accessToken') && localStorage.getItem('refreshToken'));
-  },
+  getAccessToken,
+  getRefreshToken,
+  setTokens,
+  setAccessToken: (accessToken: string) => setTokens(accessToken, ''),
+  clearTokens,
+  hasTokens: geobukHasTokens,
 };
 
 // Request 인터셉터: Authorization 헤더에 토큰 추가

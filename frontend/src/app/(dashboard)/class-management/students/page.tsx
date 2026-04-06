@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense } from "react";
 import { Header } from "@/components/layout/header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "geobuk-shared/ui";
+import { Button } from "geobuk-shared/ui";
 import {
     UserPlus,
     CheckCircle2,
@@ -220,3 +220,4 @@ export default function StudentImportPage() {
         </Suspense>
     );
 }
+

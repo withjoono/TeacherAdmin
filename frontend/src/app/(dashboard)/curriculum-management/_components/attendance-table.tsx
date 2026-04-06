@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "geobuk-shared/ui";
 import { Check, UserCheck, Clock, XCircle, Minus } from "lucide-react";
 import { useAttendanceStore } from "@/lib/stores/attendance-store";
 import type { AttendanceStatus } from "@/lib/stores/attendance-store";
@@ -162,3 +162,4 @@ export function AttendanceTable({ lessonRecordId, classId }: AttendanceTableProp
         </div>
     );
 }
+

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "geobuk-shared/ui";
+import { Input } from "geobuk-shared/ui";
 import { Label } from "@/components/ui/label";
 import {
     Dialog,
@@ -12,7 +12,7 @@ import {
     DialogTrigger,
     DialogFooter,
     DialogClose,
-} from "@/components/ui/dialog";
+} from "geobuk-shared/ui";
 import { Plus } from "lucide-react";
 import type { CreateLessonRecordData } from "@/lib/api/curriculum";
 
@@ -113,3 +113,4 @@ export function LessonRecordForm({ classId, onSubmit, isLoading }: LessonRecordF
         </Dialog>
     );
 }
+

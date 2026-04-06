@@ -3,11 +3,11 @@
 import { useState, useEffect } from "react";
 import { CheckSquare, Users } from "lucide-react";
 import { Header } from "@/components/layout/header";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "geobuk-shared/ui";
+import { Input } from "geobuk-shared/ui";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "geobuk-shared/ui";
 import { useAuthStore } from "@/lib/auth";
 import { mockExamApi, gradingApi, type MockExam, type GradeResult } from "@/lib/api";
 
@@ -292,3 +292,4 @@ export default function GradingPage() {
     </div>
   );
 }
+

@@ -4,6 +4,7 @@
  */
 
 import { config } from './config';
+import { getAccessToken, getRefreshToken } from 'geobuk-shared/auth';
 
 /** 앱 표시 라벨 */
 export const APP_LABELS: Record<string, { emoji: string; name: string }> = {
@@ -27,8 +28,8 @@ export function generateViewAsUrl(appKey: string, studentHubId: string): string 
 
   // SSO 토큰 주입 (선생님 세션 유지)
   if (typeof window !== 'undefined') {
-    const accessToken = localStorage.getItem('accessToken');
-    const refreshToken = localStorage.getItem('refreshToken');
+    const accessToken = getAccessToken();
+    const refreshToken = getRefreshToken();
     if (accessToken) url.searchParams.set('sso_access_token', accessToken);
     if (refreshToken) url.searchParams.set('sso_refresh_token', refreshToken);
   }
