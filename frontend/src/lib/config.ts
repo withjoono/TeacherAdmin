@@ -6,14 +6,14 @@ const isDev = process.env.NODE_ENV === 'development';
 
 export const config = {
   // TutorBoard Backend API URL
-  apiUrl: isDev ? 'http://localhost:4019' : 'https://teacher-backend-dot-ts-back-nest-479305.du.r.appspot.com',
+  apiUrl: process.env.NEXT_PUBLIC_API_URL || (isDev ? 'http://localhost:4019' : ''),
 
   // Frontend URL
-  frontUrl: isDev ? 'http://localhost:3019' : 'https://teacher-front.web.app',
+  frontUrl: process.env.NEXT_PUBLIC_FRONT_URL || (isDev ? 'http://localhost:3019' : ''),
 
   // Hub SSO URLs
-  hubUrl: isDev ? 'http://localhost:3000' : 'https://www.tskool.kr',
-  hubApiUrl: isDev ? 'http://localhost:4000' : 'https://ts-back-nest-479305.du.r.appspot.com',
+  hubUrl: process.env.NEXT_PUBLIC_HUB_URL || (isDev ? 'http://localhost:3000' : 'https://www.tskool.kr'),
+  hubApiUrl: process.env.NEXT_PUBLIC_HUB_API_URL || (isDev ? 'http://localhost:4000' : 'https://ts-back-nest-479305.du.r.appspot.com'),
 
   // 연동 앱 URL 매핑
   appUrls: {
