@@ -5,6 +5,9 @@ import { PrismaModule } from './prisma';
 import { ClassesModule } from './classes/classes.module';
 import { TutorModule } from './tutor/tutor.module';
 
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+
 @Module({
   imports: [
     // 환경변수 설정
@@ -23,6 +26,8 @@ import { TutorModule } from './tutor/tutor.module';
     ClassesModule,
     TutorModule,
   ],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule { }
 

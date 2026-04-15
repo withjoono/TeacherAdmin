@@ -14,6 +14,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
                 secret: configService.get('AUTH_SECRET') || 'teacher-admin-secret-key',
                 signOptions: {
                     expiresIn: '2h',
+                    algorithm: 'HS512',
                 },
             }),
         }),

@@ -4,7 +4,7 @@
 
 import axios from 'axios';
 import { config } from '../config';
-import { publicClient, tokenManager } from './client';
+import { tokenManager } from './client';
 
 // ==================== Types ====================
 
@@ -41,10 +41,13 @@ export const setTokens = tokenManager.setTokens;
 export const clearTokens = tokenManager.clearTokens;
 
 /**
- * 이메일 로그인
+ * 이메일 로그인 (Hub 백엔드에 요청)
  */
 export const loginWithEmail = async (data: LoginRequest): Promise<LoginResponse> => {
-  const response = await publicClient.post('/auth/login-with-email', data);
+  // Hub 백엔드로 직접 로그인 요청 (TeacherAdmin 백엔드에는 인증 엔드포인트 없음)
+  const response = await axios.post(`${config.hubApiUrl}/auth/login-with-email`, data, {
+    headers: { 'Content-Type': 'application/json' },
+  });
   const { accessToken, refreshToken, member } = response.data.data;
 
   // 토큰 저장

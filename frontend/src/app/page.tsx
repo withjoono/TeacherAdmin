@@ -6,13 +6,21 @@ import { Loader2 } from "lucide-react";
 
 /**
  * 루트 페이지 — 무조건 /dashboard로 리다이렉트.
+ * sso_code가 있으면 함께 전달하여 SSOListener가 처리할 수 있도록 함.
  * 프로모/랜딩은 Hub(tskool.kr/apps/teacher-admin)에서 제공.
  */
 export default function RootPage() {
     const router = useRouter();
 
     useEffect(() => {
-        router.replace("/dashboard");
+        // sso_code가 있으면 /dashboard로 전달
+        const params = new URLSearchParams(window.location.search);
+        const ssoCode = params.get('sso_code');
+        if (ssoCode) {
+            router.replace(`/dashboard?sso_code=${encodeURIComponent(ssoCode)}`);
+        } else {
+            router.replace("/dashboard");
+        }
     }, [router]);
 
     return (

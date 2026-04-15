@@ -115,9 +115,11 @@ authClient.interceptors.response.use(
       }
 
       try {
-        // 토큰 갱신 요청
-        const response = await publicClient.post('/auth/refresh-token', {
+        // Hub 백엔드에 토큰 갱신 요청 (TeacherAdmin 백엔드에는 refresh 엔드포인트 없음)
+        const response = await axios.post(`${config.hubApiUrl}/auth/refresh-token`, {
           refreshToken,
+        }, {
+          headers: { 'Content-Type': 'application/json' },
         });
 
         const { accessToken, refreshToken: newRefreshToken } = response.data.data;

@@ -9,11 +9,9 @@ import { Request } from 'express';
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     constructor(configService: ConfigService) {
         const secret = configService.get<string>('AUTH_SECRET') || 'teacher-admin-secret-key';
-        // Hub Backend는 secret을 base64 디코딩한 Buffer로 서명 (HS512)
-        const secretBuffer = Buffer.from(secret, 'base64');
         super({
             jwtFromRequest: JwtStrategy.extractJwtFromRequestOrCookie,
-            secretOrKey: secretBuffer,
+            secretOrKey: secret,
             algorithms: ['HS512'],
         });
     }
