@@ -141,19 +141,19 @@ export async function getDashboard(): Promise<DashboardStats> {
 // ===== Classes =====
 
 export async function getMyClasses(): Promise<ClassInfo[]> {
-    const response = await authClient.get('/teacher/classes');
+    const response = await authClient.get('/tutor/classes');
     return response.data;
 }
 
 export async function getClassStudents(classId: string): Promise<StudentInfo[]> {
-    const response = await authClient.get(`/teacher/classes/${classId}/students`);
+    const response = await authClient.get(`/tutor/classes/${classId}/students`);
     return response.data;
 }
 
 // ===== Lesson Plans =====
 
 export async function getLessonPlans(classId: string): Promise<LessonPlan[]> {
-    const response = await authClient.get(`/teacher/classes/${classId}/lesson-plans`);
+    const response = await authClient.get(`/tutor/classes/${classId}/lesson-plans`);
     return response.data;
 }
 
@@ -161,7 +161,7 @@ export async function createLessonPlan(
     classId: string,
     data: { title: string; description?: string; scheduledDate?: string }
 ): Promise<LessonPlan> {
-    const response = await authClient.post(`/teacher/classes/${classId}/lesson-plans`, data);
+    const response = await authClient.post(`/tutor/classes/${classId}/lesson-plans`, data);
     return response.data;
 }
 
@@ -170,12 +170,12 @@ export async function updateLessonPlan(
     planId: string,
     data: { title?: string; description?: string; scheduledDate?: string; progress?: number }
 ): Promise<LessonPlan> {
-    const response = await authClient.put(`/teacher/classes/${classId}/lesson-plans/${planId}`, data);
+    const response = await authClient.put(`/tutor/classes/${classId}/lesson-plans/${planId}`, data);
     return response.data;
 }
 
 export async function deleteLessonPlan(classId: string, planId: string): Promise<void> {
-    await authClient.delete(`/teacher/classes/${classId}/lesson-plans/${planId}`);
+    await authClient.delete(`/tutor/classes/${classId}/lesson-plans/${planId}`);
 }
 
 // ===== Lesson Records =====
@@ -192,7 +192,7 @@ export async function createLessonRecord(
         fileUrl?: string;
     }
 ): Promise<LessonRecord> {
-    const response = await authClient.post(`/teacher/classes/${classId}/lesson-records`, data);
+    const response = await authClient.post(`/tutor/classes/${classId}/lesson-records`, data);
     return response.data;
 }
 
@@ -205,7 +205,7 @@ export async function bulkCheckAttendance(
         records: Array<{ studentId: string; status: 'present' | 'late' | 'absent'; note?: string }>;
     }
 ): Promise<void> {
-    await authClient.post(`/teacher/classes/${classId}/attendance`, data);
+    await authClient.post(`/tutor/classes/${classId}/attendance`, data);
 }
 
 export async function getAttendance(
@@ -213,7 +213,7 @@ export async function getAttendance(
     date?: string
 ): Promise<AttendanceRecord[]> {
     const params = date ? { date } : {};
-    const response = await authClient.get(`/teacher/classes/${classId}/attendance`, { params });
+    const response = await authClient.get(`/tutor/classes/${classId}/attendance`, { params });
     return response.data;
 }
 
@@ -229,7 +229,7 @@ export async function createTest(
         maxScore: number;
     }
 ): Promise<TestInfo> {
-    const response = await authClient.post(`/teacher/classes/${classId}/tests`, data);
+    const response = await authClient.post(`/tutor/classes/${classId}/tests`, data);
     return response.data;
 }
 
@@ -238,11 +238,11 @@ export async function bulkInputTestResults(
     testId: string,
     data: { results: Array<{ studentId: string; score: number; feedback?: string }> }
 ): Promise<void> {
-    await authClient.post(`/teacher/classes/${classId}/tests/${testId}/results`, data);
+    await authClient.post(`/tutor/classes/${classId}/tests/${testId}/results`, data);
 }
 
 export async function getTestResults(classId: string, testId: string): Promise<TestResult[]> {
-    const response = await authClient.get(`/teacher/classes/${classId}/tests/${testId}/results`);
+    const response = await authClient.get(`/tutor/classes/${classId}/tests/${testId}/results`);
     return response.data;
 }
 
@@ -258,7 +258,7 @@ export async function createAssignment(
         fileUrl?: string;
     }
 ): Promise<Assignment> {
-    const response = await authClient.post(`/teacher/classes/${classId}/assignments`, data);
+    const response = await authClient.post(`/tutor/classes/${classId}/assignments`, data);
     return response.data;
 }
 
@@ -266,7 +266,7 @@ export async function getAssignmentSubmissions(
     classId: string,
     assignmentId: string
 ): Promise<AssignmentSubmission[]> {
-    const response = await authClient.get(`/teacher/classes/${classId}/assignments/${assignmentId}/submissions`);
+    const response = await authClient.get(`/tutor/classes/${classId}/assignments/${assignmentId}/submissions`);
     return response.data;
 }
 
@@ -276,7 +276,7 @@ export async function gradeSubmission(
     submissionId: string,
     data: { score?: number; feedback?: string }
 ): Promise<void> {
-    await authClient.patch(`/teacher/classes/${classId}/assignments/${assignmentId}/submissions/${submissionId}/grade`, data);
+    await authClient.patch(`/tutor/classes/${classId}/assignments/${assignmentId}/submissions/${submissionId}/grade`, data);
 }
 
 // ===== Private Comments =====
@@ -286,11 +286,11 @@ export async function createPrivateComment(data: {
     content: string;
     imageUrl?: string;
 }): Promise<PrivateComment> {
-    const response = await authClient.post('/teacher/comments', data);
+    const response = await authClient.post('/tutor/comments', data);
     return response.data;
 }
 
 export async function getPrivateComments(studentId: string): Promise<PrivateComment[]> {
-    const response = await authClient.get(`/teacher/comments/${studentId}`);
+    const response = await authClient.get(`/tutor/comments/${studentId}`);
     return response.data;
 }

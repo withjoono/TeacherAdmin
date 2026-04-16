@@ -72,3 +72,16 @@ export async function setLinkClass(linkId: number, classId: number | null): Prom
 export async function unlinkAccount(linkId: number): Promise<void> {
   await hubApiClient.delete(`/account-link/links/${linkId}`);
 }
+
+/**
+ * 대리 접속(Impersonation) SSO 코드 발급
+ * 선생님이 연동된 학생의 앱으로 접속할 때 사용
+ */
+export async function impersonateApp(studentId: string, targetService: string): Promise<string> {
+  const response = await hubApiClient.post('/auth/sso/impersonate', {
+    studentId,
+    targetService,
+  });
+  // 성공시 { success: true, data: { code: '...' } } 형태 또는 바로 { code: '...' } 형태 반환
+  return response.data?.data?.code || response.data?.code;
+}

@@ -82,7 +82,7 @@ export async function createArenaClass(data: {
     name: string;
     description?: string;
 }): Promise<ArenaClass> {
-    const response = await authClient.post('/api/classes', data);
+    const response = await authClient.post('/classes', data);
     return response.data;
 }
 
@@ -90,7 +90,7 @@ export async function createArenaClass(data: {
  * 내 클래스 목록 조회
  */
 export async function getMyArenaClasses(): Promise<ArenaClass[]> {
-    const response = await authClient.get('/api/classes');
+    const response = await authClient.get('/classes');
     return response.data;
 }
 
@@ -101,7 +101,7 @@ export async function importStudentsToClass(
     classId: number,
     studentIds: string[]
 ): Promise<ImportStudentsResult> {
-    const response = await authClient.post(`/api/classes/${classId}/students`, {
+    const response = await authClient.post(`/classes/${classId}/students`, {
         studentIds,
     });
     return response.data;
@@ -114,7 +114,7 @@ export async function getClassStats(
     classId: number,
     period: 'daily' | 'weekly' | 'monthly' = 'weekly'
 ): Promise<ClassStats> {
-    const response = await authClient.get(`/api/classes/${classId}/stats`, {
+    const response = await authClient.get(`/classes/${classId}/stats`, {
         params: { period },
     });
     return response.data;
@@ -126,6 +126,6 @@ export async function getClassStats(
 export async function getClassMembers(
     classId: number
 ): Promise<ClassMember[]> {
-    const response = await authClient.get(`/api/classes/${classId}/members`);
+    const response = await authClient.get(`/classes/${classId}/members`);
     return response.data;
 }

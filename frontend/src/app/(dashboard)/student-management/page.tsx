@@ -21,6 +21,8 @@ export default function StudentManagementPage() {
   const [myClasses, setMyClasses] = useState<MentoringClass[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedClass, setSelectedClass] = useState<string>("all");
+  const [impersonatingMap, setImpersonatingMap] = useState<Record<string, boolean>>({});
+  const [selectedAppMap, setSelectedAppMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     async function fetchData() {
@@ -30,7 +32,7 @@ export default function StudentManagementPage() {
           getLinkedAccounts(),
           getMyClasses(),
         ]);
-        const students = (Array.isArray(links) ? links : []).filter(l => l.partnerType === 'student');
+        const students = (Array.isArray(links) ? links : []).filter(l => l.partnerType !== 'teacher');
         setLinkedStudents(students);
         setMyClasses(Array.isArray(classes) ? classes : []);
       } catch (err) {
@@ -70,6 +72,38 @@ export default function StudentManagementPage() {
 
   const goToDetail = (studentId: string) => {
     router.push(`/student-management/detail?id=${studentId}`);
+  };
+
+  const handleImpersonate = async (studentId: string, sharedApps: string[]) => {
+    if (!sharedApps || sharedApps.length === 0) return;
+    
+    // 선택된 앱이 없으면 첫 번째 공유 앱 사용
+    const appId = selectedAppMap[studentId] || sharedApps[0];
+    
+    try {
+      setImpersonatingMap(prev => ({ ...prev, [studentId]: true }));
+      const { impersonateApp } = await import('@/lib/api/hub');
+      const code = await impersonateApp(studentId, appId);
+      
+      const targetUrls: Record<string, string> = {
+        'susi': process.env.NEXT_PUBLIC_SUSI_URL || 'https://susi-front.web.app',
+        'jungsi': process.env.NEXT_PUBLIC_JUNGSI_URL || 'https://jungsi-front.web.app',
+        'studyplanner': process.env.NEXT_PUBLIC_STUDYPLANNER_URL || 'https://studyplanner-front.web.app',
+        'examhub': process.env.NEXT_PUBLIC_EXAMHUB_URL || 'https://examhub-front.web.app',
+        'mysanggibu': process.env.NEXT_PUBLIC_MYSANGGIBU_URL || 'https://ms-front.web.app',
+      };
+      
+      const baseUrl = targetUrls[appId] || targetUrls['susi'];
+      const targetUrl = new URL('/main', baseUrl);
+      targetUrl.searchParams.set('sso_code', code);
+      
+      window.open(targetUrl.toString(), '_blank');
+    } catch (err) {
+      console.error('Failed to impersonate:', err);
+      alert('앱 대리 접속에 실패했습니다. 권한을 확인해주세요.');
+    } finally {
+      setImpersonatingMap(prev => ({ ...prev, [studentId]: false }));
+    }
   };
 
   const assignedCount = linkedStudents.filter(s => s.classId).length;
@@ -200,11 +234,44 @@ export default function StudentManagementPage() {
                 <button
                   className="gb-btn gb-btn-outline gb-btn-sm"
                   onClick={() => goToDetail(student.partnerId)}
+                  style={{ whiteSpace: "nowrap" }}
                 >
                   <Eye style={{ width: 16, height: 16 }} />
                   상세
                 </button>
               </div>
+
+              {/* 앱 대리 접속 (Impersonation) UI */}
+              {student.sharedApps?.length > 0 && (
+                <div style={{
+                  display: "flex", alignItems: "center", gap: "var(--space-2)",
+                  paddingTop: "var(--space-3)", marginTop: "var(--space-3)", borderTop: "1px dashed var(--color-border-light)",
+                }}>
+                  <select
+                    value={selectedAppMap[student.partnerId] || student.sharedApps[0] || ''}
+                    onChange={(e) => setSelectedAppMap(prev => ({ ...prev, [student.partnerId]: e.target.value }))}
+                    className="gb-input"
+                    style={{ height: 32, flex: 1, fontSize: "var(--text-xs)" }}
+                  >
+                    {student.sharedApps.map(app => (
+                      <option key={app} value={app}>{app.toUpperCase()} 앱</option>
+                    ))}
+                  </select>
+                  <button
+                    className="gb-btn gb-btn-primary gb-btn-sm"
+                    onClick={() => handleImpersonate(student.partnerId, student.sharedApps)}
+                    disabled={impersonatingMap[student.partnerId]}
+                    style={{ whiteSpace: "nowrap" }}
+                  >
+                    {impersonatingMap[student.partnerId] ? (
+                      <Loader2 style={{ width: 14, height: 14, animation: "spin 1s linear infinite" }} />
+                    ) : (
+                      <BookOpen style={{ width: 14, height: 14 }} />
+                    )}
+                    {impersonatingMap[student.partnerId] ? "접속 중" : "앱 접속"}
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>

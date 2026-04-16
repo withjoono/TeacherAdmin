@@ -1,0 +1,47 @@
+name: Deploy TeacherAdmin Frontend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://npm.pkg.github.com
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build (production only - no .env.local)
+        working-directory: frontend
+        run: npm run build
+
+      - name: Verify no localhost in build
+        working-directory: frontend
+        run: |
+          if grep -r "localhost" out/ --include="*.js" --include="*.html" -l 2>/dev/null; then
+            echo "::error::FATAL - localhost found in production build!"
+            exit 1
+          fi
+          echo "✅ No localhost references in build output"
+
+      - name: Deploy to Firebase Hosting
+        working-directory: frontend
+        run: npx firebase-tools deploy --only hosting --project ts-front-479305
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}

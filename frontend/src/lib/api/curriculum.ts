@@ -208,7 +208,7 @@ export async function getComments(studentId: string): Promise<LessonComment[]> {
  * 코멘트 추가
  */
 export async function addComment(studentId: string, message: string): Promise<LessonComment> {
-  const response = await authClient.post('/teacher/comments', {
+  const response = await authClient.post('/tutor/comments', {
     targetId: studentId,
     studentId,
     content: message,
