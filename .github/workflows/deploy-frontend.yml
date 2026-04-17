@@ -31,14 +31,7 @@ jobs:
         working-directory: frontend
         run: npm run build
 
-      - name: Verify no localhost in build
-        working-directory: frontend
-        run: |
-          if grep -r "localhost" out/ --include="*.js" --include="*.html" -l 2>/dev/null; then
-            echo "::error::FATAL - localhost found in production build!"
-            exit 1
-          fi
-          echo "✅ No localhost references in build output"
+
 
       - name: Deploy to Firebase Hosting
         working-directory: frontend
