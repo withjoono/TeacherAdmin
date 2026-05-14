@@ -19,7 +19,7 @@ import {
   ClipboardList,
   MessageSquare,
 } from "lucide-react";
-import { WonCircle } from "@/components/icons";
+import { WonCircle, Acorn } from "@/components/icons";
 import { config } from "@/lib/config";
 import { useAuthStore } from "@/lib/auth";
 import { logout as logoutApi } from "@/lib/api/auth";
@@ -362,6 +362,29 @@ export function Sidebar() {
                 gap: "4px",
               }}
             >
+              {/* 도토리 */}
+              <a
+                href={getHubUrl('/my-acorns')}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  position: "relative",
+                  display: "flex",
+                  height: "36px",
+                  width: "36px",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: "50%",
+                  border: "none",
+                  background: "none",
+                  color: "#6b7280",
+                  cursor: "pointer",
+                  transition: "all 150ms ease",
+                }}
+                title="내 도토리"
+              >
+                <Acorn style={{ width: "20px", height: "20px" }} />
+              </a>
               {/* 결제 */}
               <a
                 href={getHubUrl('/products')}
