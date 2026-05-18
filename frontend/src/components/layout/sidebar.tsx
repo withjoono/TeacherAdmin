@@ -91,17 +91,16 @@ export function Sidebar() {
   const [userOpen, setUserOpen] = useState(false);
   const navRef = useRef<HTMLElement>(null);
 
-  const handleLogout = async () => {
-    try {
-      await logoutApi();
-    } catch (e) {
-      console.error('Logout error:', e);
-    }
-    useAuthStore.getState().logout();
+  const handleLogout = () => {
     setUserOpen(false);
     setMobileOpen(false);
-    // force_login=true로 Hub 로그인 페이지로 이동 — Hub 자동 SSO 로그인 방지
+    // Zustand를 먼저 초기화 (localStorage 토큰은 아직 살아있어 auth guard가 router.push('/login')을 실행하지 않음)
+    // auth guard 조건: !isAuthenticated(true) && !hasTokens()(false) → false → 리다이렉트 없음
+    useAuthStore.getState().logout();
+    // Hub 로그인 페이지로 하드 네비게이션 (force_login=true → 자동 SSO 방지)
     redirectToHubLogin({ forceLogin: true });
+    // 네비게이션 이후 백그라운드에서 토큰 정리 + Hub 세션 무효화 (best-effort)
+    logoutApi().catch(() => {});
   };
 
   // 외부 클릭 시 드롭다운 닫기
