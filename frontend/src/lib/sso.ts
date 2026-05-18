@@ -5,10 +5,12 @@ const HUB_URL = config.hubUrl;
 const HUB_API_URL = config.hubApiUrl;
 const SERVICE_ID = 'teacheradmin';
 
-export function redirectToHubLogin() {
-    // 로그인/회원가입 후 항상 대시보드로 리다이렉트
+export function redirectToHubLogin({ forceLogin = false }: { forceLogin?: boolean } = {}) {
     const dashboardUrl = `${window.location.origin}/dashboard`;
-    window.location.href = `${HUB_URL}/auth/login?redirect=${encodeURIComponent(dashboardUrl)}`;
+    const url = new URL(`${HUB_URL}/auth/login`);
+    url.searchParams.set('redirect', dashboardUrl);
+    if (forceLogin) url.searchParams.set('force_login', 'true');
+    window.location.href = url.toString();
 }
 
 /**
