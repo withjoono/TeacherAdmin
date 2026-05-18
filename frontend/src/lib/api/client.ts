@@ -105,11 +105,11 @@ authClient.interceptors.response.use(
         if (hasSSOCode) {
           return Promise.reject(error);
         }
-        // 리프레시 토큰이 없으면 Hub SSO 로그인으로 리다이렉트
+        // 리프레시 토큰이 없으면 Hub SSO 로그인으로 리다이렉트 (force_login으로 자동 SSO 루프 방지)
         tokenManager.clearTokens();
         if (typeof window !== 'undefined') {
           const { redirectToHubLogin } = await import('../sso');
-          redirectToHubLogin();
+          redirectToHubLogin({ forceLogin: true });
         }
         return Promise.reject(error);
       }
@@ -141,7 +141,7 @@ authClient.interceptors.response.use(
         const hasSSOCode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('sso_code');
         if (!hasSSOCode && typeof window !== 'undefined') {
           const { redirectToHubLogin } = await import('../sso');
-          redirectToHubLogin();
+          redirectToHubLogin({ forceLogin: true });
         }
         return Promise.reject(refreshError);
       } finally {

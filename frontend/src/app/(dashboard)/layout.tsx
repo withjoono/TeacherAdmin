@@ -17,7 +17,9 @@ export default function DashboardLayout({
   useEffect(() => {
     // 클라이언트에서만 localStorage 접근 가능
     const { hasTokens } = require("geobuk-shared/auth");
-    if (!isAuthenticated && !hasTokens()) {
+    // sso_code가 있으면 SSOListener가 처리 중이므로 리다이렉트 하지 않음 (무한 루프 방지)
+    const hasSSOCode = new URLSearchParams(window.location.search).has('sso_code');
+    if (!isAuthenticated && !hasTokens() && !hasSSOCode) {
       router.push("/login");
     }
     setChecked(true);
