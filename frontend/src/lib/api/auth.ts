@@ -58,13 +58,20 @@ export const loginWithEmail = async (data: LoginRequest): Promise<LoginResponse>
 
 /**
  * 로그아웃
+ * Hub 세션도 함께 무효화하여 자동 재로그인 방지
  */
 export const logout = async (): Promise<void> => {
   try {
-    // Hub 로그아웃 호출 (선택사항, 토큰만 지워도 됨)
-    // await publicClient.post('/auth/logout');
+    const refreshToken = tokenManager.getRefreshToken();
+    if (refreshToken) {
+      await axios.post(`${config.hubApiUrl}/auth/logout`, { refreshToken }, {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 3000,
+      });
+    }
+  } catch {
+    // Hub 로그아웃 실패해도 로컬 로그아웃은 진행
   } finally {
-    // 토큰 삭제
     tokenManager.clearTokens();
     removeUser();
   }

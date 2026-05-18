@@ -14,28 +14,75 @@ export class TutorService {
     // ===== CLASS MANAGEMENT =====
 
     async getTeacherDashboard(teacherHubId: string) {
-        const [classes, recentComments] = await Promise.all([
+        const [classes, recentComments, studentLinks] = await Promise.all([
             this.prisma.mentoring_class_tb.findMany({
                 where: { teacher_id: teacherHubId, is_active: true },
-                include: {
-                    _count: { select: { lessonPlans: true } },
-                },
+                include: { _count: { select: { lessonPlans: true } } },
                 orderBy: { created_at: 'desc' },
+            }).catch((e) => {
+                this.logger.error(`Dashboard 클래스 조회 실패: ${e.message}`);
+                return [];
             }),
             this.prisma.tbPrivateComment.findMany({
-                where: {
-                    OR: [{ authorId: teacherHubId }, { targetId: teacherHubId }],
-                },
-                include: {
-                    author: { select: { id: true, nickname: true, role_type: true } },
-                    target: { select: { id: true, nickname: true, role_type: true } },
-                },
+                where: { OR: [{ authorId: teacherHubId }, { targetId: teacherHubId }] },
                 orderBy: { createdAt: 'desc' },
                 take: 10,
+                select: { id: true, content: true, createdAt: true, authorId: true },
+            }).catch((e) => {
+                this.logger.error(`Dashboard 코멘트 조회 실패: ${e.message}`);
+                return [];
             }),
+            this.prisma.mentoring_account_link_tb.findMany({
+                where: { member_id: teacherHubId },
+            }).catch(() => []),
         ]);
 
-        return { classes, recentComments };
+        const classIds = classes.map((c) => c.id);
+        const uniqueStudentIds = new Set(
+            studentLinks.map((l) => l.linked_member_id).filter(Boolean),
+        );
+
+        const [pendingAssignments, upcomingExams, todayLessons] = await Promise.all([
+            this.prisma.tbAssignment.count({
+                where: { lesson: { classId: { in: classIds } } },
+            }).catch(() => 0),
+            this.prisma.tbTest.count({
+                where: {
+                    lesson: { classId: { in: classIds } },
+                    testDate: { gte: new Date() },
+                },
+            }).catch(() => 0),
+            this.prisma.tbLessonPlan.findMany({
+                where: {
+                    classId: { in: classIds },
+                    scheduledDate: {
+                        gte: new Date(new Date().setHours(0, 0, 0, 0)),
+                        lt: new Date(new Date().setHours(23, 59, 59, 999)),
+                    },
+                },
+                include: { class: { select: { name: true } } },
+                take: 5,
+            }).catch(() => []),
+        ]);
+
+        return {
+            totalClasses: classes.length,
+            totalStudents: uniqueStudentIds.size,
+            pendingAssignments,
+            upcomingExams,
+            unreadMessages: recentComments.length,
+            todayLessons: todayLessons.map((l) => ({
+                id: l.id,
+                title: l.title,
+                className: (l as any).class?.name,
+                scheduledDate: l.scheduledDate,
+            })),
+            recentActivities: recentComments.map((c) => ({
+                id: c.id,
+                description: c.content.substring(0, 50),
+                time: c.createdAt,
+            })),
+        };
     }
 
     async getMyClasses(teacherHubId: string) {
@@ -445,7 +492,10 @@ export class TutorService {
         });
 
         const avgScore = testResults.length > 0
-            ? Math.round(testResults.reduce((sum, r) => sum + (r.score / r.test.maxScore) * 100, 0) / testResults.length)
+            ? Math.round(testResults.reduce((sum, r) => {
+                const max = r.test.maxScore > 0 ? r.test.maxScore : 100;
+                return sum + (r.score / max) * 100;
+            }, 0) / testResults.length)
             : null;
 
         const thirtyDaysAgo = new Date();

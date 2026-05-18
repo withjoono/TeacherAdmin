@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger } from '@nestjs/common';
+import { PrismaExceptionFilter } from './prisma/prisma-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -10,14 +11,13 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       // 프로덕션 도메인
-      'https://teacher-front.web.app', // TeacherAdmin 프론트엔드
+      'https://teacher-admin-front.web.app', // TeacherAdmin 프론트엔드
+      'https://teacher-front.web.app', // 구 TeacherAdmin 도메인 (호환성)
       'https://ts-front-479305.web.app', // Hub 프론트엔드
       'https://www.tskool.kr',
       'https://tskool.kr',
       'https://www.geobukschool.kr',
       'https://geobukschool.kr',
-      'https://tskool.kr',
-      'https://www.tskool.kr',
       // 로컬 개발 환경
       'http://localhost:3019',  // teacher_admin frontend
       'http://localhost:3006',  // StudyArena frontend
@@ -26,6 +26,8 @@ async function bootstrap() {
   });
 
   // 글로벌 prefix 없음 (프론트엔드가 /tutor/... 직접 호출)
+
+  app.useGlobalFilters(new PrismaExceptionFilter());
 
   const port = process.env.PORT ?? 4019;
   await app.listen(port);
