@@ -4,13 +4,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import {
-  LayoutDashboard,
   Users,
-  UserCircle,
-  Home as HomeIcon,
   BookOpen,
   FileText,
-  CheckSquare,
   ChevronDown,
   LogOut,
   Bell,
@@ -26,11 +22,11 @@ import { logout as logoutApi } from "@/lib/api/auth";
 import { redirectToHubLogin } from "@/lib/sso";
 import { getAccessToken, getRefreshToken } from "geobuk-shared/auth";
 
-/** Hub URL에 SSO 토큰을 포함시켜 자동 로그인 지원 */
-function getHubUrl(path: string): string {
+/** Hub URL에 SSO 토큰을 포함시켜 자동 로그인 지원 — 클라이언트에서만 호출 */
+function buildHubUrl(path: string): string {
   const base = `${config.hubUrl}${path}`;
-  const accessToken = typeof window !== 'undefined' ? getAccessToken() : null;
-  const refreshToken = typeof window !== 'undefined' ? getRefreshToken() : null;
+  const accessToken = getAccessToken();
+  const refreshToken = getRefreshToken();
   if (!accessToken) return base;
   const url = new URL(base);
   url.searchParams.set('sso_access_token', accessToken);
@@ -50,12 +46,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   {
-    title: "대시보드",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    title: "클래스 관리",
+    title: "클래스",
     icon: Users,
     subItems: [
       { title: "클래스", href: "/class-management" },
@@ -64,20 +55,30 @@ const navItems: NavItem[] = [
     ],
   },
   {
-    title: "수업 현황",
+    title: "수업",
     icon: BookOpen,
     subItems: [
       { title: "수업 계획", href: "/curriculum-management" },
       { title: "수업 기록", href: "/lesson-records" },
       { title: "출석부", href: "/attendance" },
-      { title: "시험 관리", href: "/exam-management" },
-      { title: "문제 업로드", href: "/question-upload" },
-      { title: "채점 관리", href: "/grading-management" },
-      { title: "과제 관리", href: "/assignment-management" },
     ],
   },
   {
-    title: "비공개 코멘트",
+    title: "과제",
+    href: "/assignment-management",
+    icon: ClipboardList,
+  },
+  {
+    title: "테스트",
+    icon: FileText,
+    subItems: [
+      { title: "시험 관리", href: "/exam-management" },
+      { title: "문제 업로드", href: "/question-upload" },
+      { title: "채점 관리", href: "/grading-management" },
+    ],
+  },
+  {
+    title: "상담",
     href: "/comments",
     icon: MessageSquare,
   },
@@ -85,25 +86,38 @@ const navItems: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [userOpen, setUserOpen] = useState(false);
   const navRef = useRef<HTMLElement>(null);
 
+  // Hub URLs — initialized with base URLs (SSR-safe), enriched with tokens after hydration
+  const [hubUrls, setHubUrls] = useState({
+    myAcorns: `${config.hubUrl}/my-acorns`,
+    products: `${config.hubUrl}/products`,
+    accountLinkage: `${config.hubUrl}/account-linkage`,
+    profile: `${config.hubUrl}/users/profile`,
+    payment: `${config.hubUrl}/users/payment`,
+  });
+
+  useEffect(() => {
+    setHubUrls({
+      myAcorns: buildHubUrl('/my-acorns'),
+      products: buildHubUrl('/products'),
+      accountLinkage: buildHubUrl('/account-linkage'),
+      profile: buildHubUrl('/users/profile'),
+      payment: buildHubUrl('/users/payment'),
+    });
+  }, []);
+
   const handleLogout = () => {
     setUserOpen(false);
     setMobileOpen(false);
-    // Zustand를 먼저 초기화 (localStorage 토큰은 아직 살아있어 auth guard가 router.push('/login')을 실행하지 않음)
-    // auth guard 조건: !isAuthenticated(true) && !hasTokens()(false) → false → 리다이렉트 없음
     useAuthStore.getState().logout();
-    // Hub 로그인 페이지로 하드 네비게이션 (force_login=true → 자동 SSO 방지)
     redirectToHubLogin({ forceLogin: true });
-    // 네비게이션 이후 백그라운드에서 토큰 정리 + Hub 세션 무효화 (best-effort)
     logoutApi().catch(() => {});
   };
 
-  // 외부 클릭 시 드롭다운 닫기
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (navRef.current && !navRef.current.contains(e.target as Node)) {
@@ -114,7 +128,6 @@ export function Sidebar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // 페이지 이동 시 드롭다운 닫기
   useEffect(() => {
     setOpenMenu(null);
     setMobileOpen(false);
@@ -218,9 +231,7 @@ export function Sidebar() {
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          setOpenMenu(
-                            openMenu === item.title ? null : item.title
-                          );
+                          setOpenMenu(openMenu === item.title ? null : item.title);
                         }}
                         style={{
                           display: "flex",
@@ -365,7 +376,7 @@ export function Sidebar() {
             >
               {/* 도토리 */}
               <a
-                href={getHubUrl('/my-acorns')}
+                href={hubUrls.myAcorns}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
@@ -388,7 +399,7 @@ export function Sidebar() {
               </a>
               {/* 결제 */}
               <a
-                href={getHubUrl('/products')}
+                href={hubUrls.products}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
@@ -432,7 +443,7 @@ export function Sidebar() {
               </button>
               {/* 계정연동 */}
               <a
-                href={getHubUrl('/account-linkage')}
+                href={hubUrls.accountLinkage}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
@@ -498,7 +509,7 @@ export function Sidebar() {
                       }}
                     >
                       <a
-                        href={getHubUrl('/users/profile')}
+                        href={hubUrls.profile}
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{
@@ -519,7 +530,7 @@ export function Sidebar() {
                         마이 페이지
                       </a>
                       <a
-                        href={getHubUrl('/users/payment')}
+                        href={hubUrls.payment}
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{
@@ -684,7 +695,7 @@ export function Sidebar() {
                 }}
               >
                 <a
-                  href={getHubUrl('/users/profile')}
+                  href={hubUrls.profile}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => setMobileOpen(false)}
@@ -703,7 +714,7 @@ export function Sidebar() {
                   마이 페이지
                 </a>
                 <a
-                  href={getHubUrl('/users/payment')}
+                  href={hubUrls.payment}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => setMobileOpen(false)}
