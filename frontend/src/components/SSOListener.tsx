@@ -5,21 +5,21 @@ import { processSSOLogin } from '@/lib/sso';
 import { useAuthStore } from '@/lib/auth';
 
 export function SSOListener() {
-    const [isSSOLoading, setIsSSOLoading] = useState(() => {
-        if (typeof window === 'undefined') return false;
-        const params = new URLSearchParams(window.location.search);
-        return !!params.get('sso_code');
-    });
+    const [isSSOLoading, setIsSSOLoading] = useState(false);
 
     useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (!params.has('sso_code')) return;
+
+        setIsSSOLoading(true);
         processSSOLogin().then((tokens) => {
             if (tokens) {
                 console.log('[SSO] 로그인 성공');
-                // useAuthStore에 토큰 동기화
                 useAuthStore.getState().setTokens(tokens.accessToken, tokens.refreshToken);
                 window.location.reload();
+            } else {
+                setIsSSOLoading(false);
             }
-            setIsSSOLoading(false);
         });
     }, []);
 
