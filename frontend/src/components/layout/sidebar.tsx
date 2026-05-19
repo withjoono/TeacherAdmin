@@ -18,8 +18,7 @@ import {
 import { WonCircle, Acorn } from "@/components/icons";
 import { config } from "@/lib/config";
 import { useAuthStore } from "@/lib/auth";
-import { logout as logoutApi } from "@/lib/api/auth";
-import { redirectToHubLogin } from "@/lib/sso";
+import { redirectToHubLogout } from "@/lib/sso";
 import { getAccessToken, getRefreshToken } from "geobuk-shared/auth";
 
 /** Hub URL에 SSO 토큰을 포함시켜 자동 로그인 지원 — 클라이언트에서만 호출 */
@@ -116,8 +115,7 @@ export function Sidebar() {
     setUserOpen(false);
     setMobileOpen(false);
     useAuthStore.getState().logout();
-    redirectToHubLogin({ forceLogin: true });
-    logoutApi().catch(() => {});
+    redirectToHubLogout();
   };
 
   useEffect(() => {

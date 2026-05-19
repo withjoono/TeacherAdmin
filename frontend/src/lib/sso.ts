@@ -13,6 +13,10 @@ export function redirectToHubLogin({ forceLogin = false }: { forceLogin?: boolea
     window.location.href = url.toString();
 }
 
+export function redirectToHubLogout() {
+    window.location.href = `${HUB_URL}/auth/logout`;
+}
+
 /**
  * SSO 코드를 Hub Backend에 직접 전송하여 토큰 교환
  * 성공 시 토큰 객체를 반환, 실패 시 null 반환
