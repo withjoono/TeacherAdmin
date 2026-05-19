@@ -51,7 +51,6 @@ const navItems: NavItem[] = [
     subItems: [
       { title: "클래스", href: "/class-management" },
       { title: "학생 관리", href: "/student-management" },
-      { title: "학부모 관리", href: "/parent-management" },
     ],
   },
   {
@@ -79,8 +78,11 @@ const navItems: NavItem[] = [
   },
   {
     title: "상담",
-    href: "/comments",
     icon: MessageSquare,
+    subItems: [
+      { title: "비공개 코멘트", href: "/comments" },
+      { title: "학부모 관리", href: "/parent-management" },
+    ],
   },
 ];
 
