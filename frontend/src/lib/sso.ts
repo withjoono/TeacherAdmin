@@ -14,10 +14,7 @@ export function redirectToHubLogin({ forceLogin = false }: { forceLogin?: boolea
 }
 
 export function redirectToHubLogout() {
-    const url = new URL(`${HUB_URL}/auth/login`);
-    url.searchParams.set('clear_session', 'true');
-    url.searchParams.set('force_login', 'true');
-    window.location.href = url.toString();
+    window.location.href = `${HUB_URL}/auth/logout`;
 }
 
 /**
