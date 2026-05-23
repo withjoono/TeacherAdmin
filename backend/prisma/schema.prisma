@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["teacher_admin", "hub", "tutorboard", "susi", "jungsi", "mysanggibu"]
+  schemas  = ["teacher_admin", "hub", "tutorboard", "susi", "jungsi", "mysanggibu", "public"]
 }
 
 /// 아레나 클래스 (반/그룹)
@@ -400,4 +400,130 @@ model HubSharedSchedule {
   @@index([hubUserId, eventDate], name: "idx_hub_schedule_date")
   @@map("hub_shared_schedule")
   @@schema("hub")
+}
+
+// ================================================================
+// STUDYPLANNER (public 스키마) — 플래너 검사·채점 연동용 매핑
+//
+// StudyPlanner 앱이 소유한 테이블을 크로스 스키마로 읽고, 채점 결과만
+// sp_planner_rating 에 기록한다. 이 모델들에 대해서는 절대 마이그레이션
+// (prisma migrate / db push)을 실행하지 않는다 — 읽기 + 채점 쓰기 전용.
+// ================================================================
+
+/// StudyPlanner 미션 상태 (public."MissionStatus" enum)
+enum SpMissionStatus {
+  pending
+  fixed
+  changed
+  added
+  deleted
+  completed
+
+  @@map("MissionStatus")
+  @@schema("public")
+}
+
+/// StudyPlanner 학생 (읽기 전용)
+model SpStudent {
+  id          BigInt   @id @default(autoincrement())
+  studentCode String   @unique @map("student_code") @db.VarChar(20)
+  userId      String?  @unique @map("user_id")
+  name        String   @db.VarChar(50)
+  grade       String?  @db.VarChar(10)
+  schoolName  String?  @map("school_name") @db.VarChar(50)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  teacherLinks SpTeacherStudent[]
+
+  @@map("student")
+  @@schema("public")
+}
+
+/// StudyPlanner 선생님-학생 연결 (채점 시 get-or-create)
+model SpTeacherStudent {
+  id        BigInt   @id @default(autoincrement())
+  teacherId String   @map("teacher_id")
+  studentId BigInt   @map("student_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  student SpStudent         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  ratings SpPlannerRating[]
+
+  @@unique([teacherId, studentId], name: "uk_teacher_student")
+  @@index([teacherId], name: "idx_ts_teacher")
+  @@index([studentId], name: "idx_ts_student")
+  @@map("sp_teacher_student")
+  @@schema("public")
+}
+
+/// StudyPlanner 선생님 플래너 채점 (1~10점 + 코멘트) — 채점 쓰기 대상
+model SpPlannerRating {
+  id               BigInt   @id @default(autoincrement())
+  teacherStudentId BigInt   @map("teacher_student_id")
+  ratingDate       DateTime @map("rating_date") @db.Date
+  score            Int
+  comment          String?  @db.Text
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  teacherStudent SpTeacherStudent @relation(fields: [teacherStudentId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherStudentId, ratingDate], name: "uk_rating_date")
+  @@index([teacherStudentId], name: "idx_rating_ts")
+  @@map("sp_planner_rating")
+  @@schema("public")
+}
+
+/// StudyPlanner 일일 미션 (읽기 전용)
+model SpDailyMission {
+  id        BigInt          @id @default(autoincrement())
+  studentId BigInt          @map("student_id")
+  date      DateTime        @db.Date
+  startTime DateTime?       @map("start_time") @db.Time(0)
+  endTime   DateTime?       @map("end_time") @db.Time(0)
+  subject   String?         @db.VarChar(50)
+  content   String?         @db.VarChar(200)
+  startPage Int?            @map("start_page")
+  endPage   Int?            @map("end_page")
+  amount    Int?
+  sortOrder Int             @default(0) @map("sort_order")
+  status    SpMissionStatus @default(pending)
+  createdAt DateTime        @default(now()) @map("created_at")
+
+  @@index([studentId, date], name: "idx_mission_student_date")
+  @@map("daily_mission")
+  @@schema("public")
+}
+
+/// StudyPlanner 미션 결과 (읽기 전용)
+model SpMissionResult {
+  id            BigInt    @id @default(autoincrement())
+  missionId     BigInt    @map("mission_id")
+  studentId     BigInt    @map("student_id")
+  completedDate DateTime? @map("completed_date") @db.Date
+  startPage     Int?      @map("start_page")
+  endPage       Int?      @map("end_page")
+  amount        Int?
+  studyMinutes  Int?      @map("study_minutes")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@index([missionId], name: "idx_result_mission")
+  @@index([studentId], name: "idx_result_student")
+  @@map("mission_result")
+  @@schema("public")
+}
+
+/// StudyPlanner 일일 점수 (읽기 전용)
+model SpDailyScore {
+  id           BigInt   @id @default(autoincrement())
+  studentId    BigInt   @map("student_id")
+  date         DateTime @db.Date
+  totalScore   Decimal  @map("total_score") @db.Decimal(10, 2)
+  missionCount Int      @map("mission_count")
+  studyMinutes Int      @default(0) @map("study_minutes")
+
+  @@unique([studentId, date], name: "uk_daily_score")
+  @@index([studentId], name: "idx_daily_score_student")
+  @@map("sp_daily_score")
+  @@schema("public")
 }

@@ -14,6 +14,7 @@ import {
   ArrowLeft,
   LayoutDashboard,
   ClipboardList,
+  ClipboardCheck,
   BarChart3,
   CalendarCheck,
   Clock,
@@ -25,6 +26,8 @@ import {
   Loader2,
   MessageSquare,
   Send,
+  Star,
+  Save,
 } from "lucide-react";
 
 import {
@@ -45,14 +48,22 @@ import {
   markAllHubCommentsRead,
   type HubComment,
 } from "@/lib/api/hub-comments";
+import {
+  getStudentPlanner,
+  getPlannerRatings,
+  createPlannerRating,
+  type StudentPlanner,
+  type PlannerRating,
+} from "@/lib/api/planner-rating";
 
-type TabId = "overview" | "assignments" | "tests" | "attendance";
+type TabId = "overview" | "assignments" | "tests" | "attendance" | "planner";
 
 const TABS: { id: TabId; label: string; icon: any }[] = [
   { id: "overview", label: "학습 요약", icon: LayoutDashboard },
   { id: "assignments", label: "과제", icon: ClipboardList },
   { id: "tests", label: "성적", icon: BarChart3 },
   { id: "attendance", label: "출석", icon: CalendarCheck },
+  { id: "planner", label: "플래너 검사", icon: ClipboardCheck },
 ];
 
 export default function StudentDetailPage() {
@@ -128,6 +139,7 @@ function StudentDetailContent() {
     assignments: "과제 현황",
     tests: "성적 현황",
     attendance: "출석 현황",
+    planner: "플래너 검사",
   };
 
   const handleSendComment = useCallback(async () => {
@@ -238,6 +250,7 @@ function StudentDetailContent() {
             {activeTab === "assignments" && <AssignmentsTab assignments={assignments} />}
             {activeTab === "tests" && <TestsTab tests={tests} />}
             {activeTab === "attendance" && <AttendanceTab attendance={attendance} />}
+            {activeTab === "planner" && <PlannerTab studentId={studentId} />}
           </div>
         </div>
 
@@ -408,6 +421,280 @@ function AttendanceTab({ attendance }: { attendance: StudentAttendanceRecord[] }
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ===== 플래너 검사 탭 =====
+
+function PlannerTab({ studentId }: { studentId: string }) {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const [date, setDate] = useState(todayStr);
+  const [planner, setPlanner] = useState<StudentPlanner | null>(null);
+  const [ratings, setRatings] = useState<PlannerRating[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [score, setScore] = useState(0);
+  const [comment, setComment] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [savedMsg, setSavedMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      setSavedMsg(null);
+      const [p, r] = await Promise.all([
+        getStudentPlanner(studentId, date).catch((err: any) => {
+          if (!cancelled) {
+            setError(err?.response?.data?.message || "플래너를 불러오지 못했습니다.");
+          }
+          return null;
+        }),
+        getPlannerRatings(studentId).catch(() => [] as PlannerRating[]),
+      ]);
+      if (cancelled) return;
+      setPlanner(p);
+      setRatings(r);
+      const existing = r.find((x) => x.date === date);
+      setScore(existing?.score ?? 0);
+      setComment(existing?.comment ?? "");
+      setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [studentId, date]);
+
+  const handleSave = useCallback(async () => {
+    if (score < 1) {
+      setError("1~10점 사이의 점수를 선택해주세요.");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    setSavedMsg(null);
+    try {
+      await createPlannerRating(studentId, {
+        date,
+        score,
+        comment: comment.trim() || undefined,
+      });
+      const r = await getPlannerRatings(studentId);
+      setRatings(r);
+      setSavedMsg("채점이 저장되었습니다. 학생의 「담당 선생님 반」 화면에 반영됩니다.");
+    } catch (err: any) {
+      setError(err?.response?.data?.message || "채점 저장에 실패했습니다.");
+    } finally {
+      setSaving(false);
+    }
+  }, [studentId, date, score, comment]);
+
+  const existingRating = ratings.find((r) => r.date === date) ?? null;
+
+  return (
+    <div className="space-y-5">
+      {/* 날짜 선택 */}
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="text-sm font-medium text-muted-foreground">검사 날짜</label>
+        <input
+          type="date"
+          value={date}
+          max={todayStr}
+          onChange={(e) => setDate(e.target.value)}
+          className="rounded-lg border bg-background px-3 py-1.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring/20"
+        />
+        {date === todayStr && (
+          <span className="rounded-full bg-secondary px-2 py-0.5 text-xs text-muted-foreground">오늘</span>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center rounded-xl border bg-card py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <>
+          {error && !planner && (
+            <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {planner && (
+            <>
+              {/* 요약 */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <PlannerStat
+                  label="미션"
+                  value={`${planner.summary.completedMissions}/${planner.summary.totalMissions}`}
+                  sub="완료/전체"
+                />
+                <PlannerStat
+                  label="학습시간"
+                  value={`${Math.floor(planner.summary.studyMinutes / 60)}시간 ${planner.summary.studyMinutes % 60}분`}
+                  sub="타이머 누적"
+                />
+                <PlannerStat label="분량" value={`${planner.summary.totalPages}`} sub="페이지/문항" />
+                <PlannerStat
+                  label="성취도"
+                  value={existingRating ? `${existingRating.score}점` : "미채점"}
+                  sub="선생님 평가"
+                />
+              </div>
+
+              {/* 미션 목록 */}
+              <div className="rounded-xl border bg-card p-4">
+                <h4 className="mb-3 text-sm font-semibold">플래너 미션</h4>
+                {planner.missions.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    해당 날짜에 등록된 미션이 없습니다.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {planner.missions.map((m) => (
+                      <div
+                        key={m.id}
+                        className="flex items-start justify-between gap-3 rounded-lg bg-secondary px-3 py-2"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            {m.subject && (
+                              <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
+                                {m.subject}
+                              </span>
+                            )}
+                            <span className="truncate text-sm">{m.content || "내용 없음"}</span>
+                          </div>
+                          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+                            {(m.startTime || m.endTime) && (
+                              <span>
+                                <Clock className="mr-0.5 inline h-3 w-3" />
+                                {m.startTime ?? "?"}~{m.endTime ?? "?"}
+                              </span>
+                            )}
+                            {m.actualAmount != null && <span>분량 {m.actualAmount}</span>}
+                            {m.studyMinutes != null && <span>학습 {m.studyMinutes}분</span>}
+                          </div>
+                        </div>
+                        <span
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                            m.completed
+                              ? "bg-green-100 text-green-700"
+                              : "bg-secondary text-muted-foreground ring-1 ring-border"
+                          }`}
+                        >
+                          {m.completed ? "완료" : "미완료"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 채점 입력 */}
+              <div className="rounded-xl border bg-card p-4">
+                <h4 className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
+                  <Star className="h-4 w-4 text-amber-500" />
+                  성취도 채점 ({date})
+                </h4>
+                <p className="mb-3 text-xs text-muted-foreground">
+                  1~10점으로 평가하고 코멘트를 남기면 학생의 경쟁 화면에 반영됩니다.
+                  {existingRating && " 이미 채점한 날짜는 저장 시 갱신됩니다."}
+                </p>
+
+                <div className="mb-3 flex flex-wrap gap-1.5">
+                  {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setScore(n)}
+                      className={`h-9 w-9 rounded-lg text-sm font-semibold transition-all ${
+                        score === n
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "bg-secondary text-muted-foreground hover:bg-accent"
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+
+                <textarea
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="코멘트 (선택) — 칭찬, 개선점, 다음 목표 등"
+                  rows={3}
+                  className="w-full resize-none rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring/20"
+                />
+
+                {error && planner && (
+                  <p className="mt-2 text-xs text-red-600">{error}</p>
+                )}
+                {savedMsg && (
+                  <p className="mt-2 flex items-center gap-1 text-xs text-green-600">
+                    <CheckCircle className="h-3.5 w-3.5" />
+                    {savedMsg}
+                  </p>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving || score < 1}
+                  className="mt-3 flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  {existingRating ? "채점 수정" : "채점 저장"}
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* 채점 이력 */}
+          <div className="rounded-xl border bg-card p-4">
+            <h4 className="mb-3 text-sm font-semibold">채점 이력</h4>
+            {ratings.length === 0 ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                아직 채점 이력이 없습니다.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {ratings.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setDate(r.date)}
+                    className={`flex w-full items-start gap-3 rounded-lg px-3 py-2 text-left transition-colors ${
+                      r.date === date ? "bg-primary/10" : "bg-secondary hover:bg-accent"
+                    }`}
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
+                      {r.score}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium text-muted-foreground">{r.date}</p>
+                      <p className="truncate text-sm">{r.comment || "코멘트 없음"}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function PlannerStat({ label, value, sub }: { label: string; value: string; sub: string }) {
+  return (
+    <div className="rounded-xl border bg-card p-3">
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <p className="mt-1 text-lg font-bold">{value}</p>
+      <p className="mt-0.5 text-[11px] text-muted-foreground">{sub}</p>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma';
 import { ClassesModule } from './classes/classes.module';
 import { TutorModule } from './tutor/tutor.module';
+import { PlannerModule } from './planner/planner.module';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -25,9 +26,9 @@ import { AppService } from './app.service';
     // 기능 모듈
     ClassesModule,
     TutorModule,
+    PlannerModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
-
+export class AppModule {}
