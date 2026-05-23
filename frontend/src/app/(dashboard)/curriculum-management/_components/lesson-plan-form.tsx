@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "geobuk-shared/ui";
-import { Input } from "geobuk-shared/ui";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
     Dialog,
@@ -12,8 +13,7 @@ import {
     DialogTrigger,
     DialogFooter,
     DialogClose,
-} from "geobuk-shared/ui";
-import { Plus } from "lucide-react";
+} from "@/components/ui/dialog";
 import type { CreateLessonRecordData } from "@/lib/api/curriculum";
 
 interface LessonRecordFormProps {
@@ -54,11 +54,11 @@ export function LessonRecordForm({ classId, onSubmit, isLoading }: LessonRecordF
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button size="sm">
-                    <Plus className="w-4 h-4 mr-2" />
+                    <Plus className="h-4 w-4" />
                     수업 기록 추가
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+            <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
                 <DialogHeader>
                     <DialogTitle>새 수업 기록 작성</DialogTitle>
                 </DialogHeader>
@@ -79,7 +79,7 @@ export function LessonRecordForm({ classId, onSubmit, isLoading }: LessonRecordF
                         <textarea
                             id="rec-content"
                             rows={4}
-                            className="w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                            className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                             placeholder="오늘 수업에서 다룬 내용을 입력하세요"
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
@@ -113,4 +113,3 @@ export function LessonRecordForm({ classId, onSubmit, isLoading }: LessonRecordF
         </Dialog>
     );
 }
-

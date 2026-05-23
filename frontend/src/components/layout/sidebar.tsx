@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import {
   Users,
@@ -16,6 +16,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { WonCircle, Acorn } from "@/components/icons";
+import { cn } from "@/lib/utils";
 import { config } from "@/lib/config";
 import { useAuthStore } from "@/lib/auth";
 import { redirectToHubLogout } from "@/lib/sso";
@@ -28,8 +29,8 @@ function buildHubUrl(path: string): string {
   const refreshToken = getRefreshToken();
   if (!accessToken) return base;
   const url = new URL(base);
-  url.searchParams.set('sso_access_token', accessToken);
-  if (refreshToken) url.searchParams.set('sso_refresh_token', refreshToken);
+  url.searchParams.set("sso_access_token", accessToken);
+  if (refreshToken) url.searchParams.set("sso_refresh_token", refreshToken);
   return url.toString();
 }
 
@@ -37,10 +38,7 @@ interface NavItem {
   title: string;
   href?: string;
   icon: React.ElementType;
-  subItems?: {
-    title: string;
-    href: string;
-  }[];
+  subItems?: { title: string; href: string }[];
 }
 
 const navItems: NavItem[] = [
@@ -61,11 +59,7 @@ const navItems: NavItem[] = [
       { title: "출석부", href: "/attendance" },
     ],
   },
-  {
-    title: "과제",
-    href: "/assignment-management",
-    icon: ClipboardList,
-  },
+  { title: "과제", href: "/assignment-management", icon: ClipboardList },
   {
     title: "테스트",
     icon: FileText,
@@ -92,7 +86,7 @@ export function Sidebar() {
   const [userOpen, setUserOpen] = useState(false);
   const navRef = useRef<HTMLElement>(null);
 
-  // Hub URLs — initialized with base URLs (SSR-safe), enriched with tokens after hydration
+  // Hub URLs — SSR-safe 기본값, 하이드레이션 후 토큰 포함 URL로 보강
   const [hubUrls, setHubUrls] = useState({
     myAcorns: `${config.hubUrl}/my-acorns`,
     products: `${config.hubUrl}/products`,
@@ -103,11 +97,11 @@ export function Sidebar() {
 
   useEffect(() => {
     setHubUrls({
-      myAcorns: buildHubUrl('/my-acorns'),
-      products: buildHubUrl('/products'),
-      accountLinkage: buildHubUrl('/account-linkage'),
-      profile: buildHubUrl('/users/profile'),
-      payment: buildHubUrl('/users/payment'),
+      myAcorns: buildHubUrl("/my-acorns"),
+      products: buildHubUrl("/products"),
+      accountLinkage: buildHubUrl("/account-linkage"),
+      profile: buildHubUrl("/users/profile"),
+      payment: buildHubUrl("/users/payment"),
     });
   }, []);
 
@@ -133,647 +127,278 @@ export function Sidebar() {
     setMobileOpen(false);
   }, [pathname]);
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
+  const isActive = (href: string) =>
+    pathname === href || pathname.startsWith(href + "/");
   const isSubMenuActive = (subItems?: { href: string }[]) =>
     subItems?.some((item) => isActive(item.href));
 
+  const navLink =
+    "flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors";
+  const iconBtn =
+    "flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground";
+
   return (
-    <>
-      {/* ─── Top Navigation Bar ─── */}
-      <header
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 9999,
-          width: "100%",
-          borderBottom: "1px solid #e5e7eb",
-          backgroundColor: "#ffffff",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: "1280px",
-            margin: "0 auto",
-            padding: "0 16px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              height: "56px",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            {/* Left: Logo */}
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <Link
-                href="/dashboard"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  textDecoration: "none",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    height: "28px",
-                    width: "28px",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: "6px",
-                    backgroundColor: "#3f8efc",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      color: "#ffffff",
-                    }}
-                  >
-                    T
-                  </span>
-                </div>
-                <span
-                  style={{
-                    fontSize: "15px",
-                    fontWeight: 700,
-                    letterSpacing: "-0.02em",
-                    color: "#3f8efc",
-                  }}
-                >
-                  Teacher Admin
-                </span>
-              </Link>
-            </div>
+    <header className="sticky top-0 z-50 w-full border-b bg-card">
+      <div className="mx-auto flex h-14 max-w-[1280px] items-center justify-between px-4 sm:px-6">
+        {/* Logo */}
+        <Link href="/dashboard" className="flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-xs font-bold text-primary-foreground">
+            T
+          </div>
+          <span className="text-[15px] font-bold tracking-tight text-primary">
+            Teacher Admin
+          </span>
+        </Link>
 
-            {/* Center: Desktop Nav */}
-            <nav
-              ref={navRef}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-              }}
-              className="desktop-nav"
-            >
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                if (item.subItems) {
-                  const active = isSubMenuActive(item.subItems);
-                  return (
-                    <div key={item.title} style={{ position: "relative" }}>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setOpenMenu(openMenu === item.title ? null : item.title);
-                        }}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "4px",
-                          borderRadius: "6px",
-                          padding: "6px 12px",
-                          fontSize: "14px",
-                          fontWeight: 500,
-                          cursor: "pointer",
-                          border: "none",
-                          backgroundColor: active ? "rgba(63,142,252,0.1)" : "transparent",
-                          color: active ? "#3f8efc" : "#6b7280",
-                          transition: "all 150ms ease",
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!active) {
-                            e.currentTarget.style.backgroundColor = "#f3f4f6";
-                            e.currentTarget.style.color = "#111827";
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!active) {
-                            e.currentTarget.style.backgroundColor = "transparent";
-                            e.currentTarget.style.color = "#6b7280";
-                          }
-                        }}
-                      >
-                        <Icon style={{ width: "16px", height: "16px" }} />
-                        {item.title}
-                        <ChevronDown
-                          style={{
-                            width: "12px",
-                            height: "12px",
-                            transform: openMenu === item.title ? "rotate(180deg)" : "rotate(0deg)",
-                            transition: "transform 150ms ease",
-                          }}
-                        />
-                      </button>
-                      {openMenu === item.title && (
-                        <div
-                          style={{
-                            position: "absolute",
-                            left: 0,
-                            top: "100%",
-                            marginTop: "4px",
-                            width: "160px",
-                            borderRadius: "8px",
-                            border: "1px solid #e5e7eb",
-                            backgroundColor: "#ffffff",
-                            padding: "4px 0",
-                            boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
-                            zIndex: 99999,
-                          }}
-                        >
-                          {item.subItems.map((sub) => {
-                            const subActive = isActive(sub.href);
-                            return (
-                              <Link
-                                key={sub.href}
-                                href={sub.href}
-                                onClick={() => setOpenMenu(null)}
-                                style={{
-                                  display: "block",
-                                  padding: "8px 16px",
-                                  fontSize: "14px",
-                                  textDecoration: "none",
-                                  color: subActive ? "#3f8efc" : "#6b7280",
-                                  backgroundColor: subActive ? "rgba(63,142,252,0.1)" : "transparent",
-                                  fontWeight: subActive ? 600 : 400,
-                                  cursor: "pointer",
-                                  transition: "all 150ms ease",
-                                }}
-                                onMouseEnter={(e) => {
-                                  if (!subActive) {
-                                    e.currentTarget.style.backgroundColor = "#f3f4f6";
-                                  }
-                                }}
-                                onMouseLeave={(e) => {
-                                  if (!subActive) {
-                                    e.currentTarget.style.backgroundColor = "transparent";
-                                  }
-                                }}
-                              >
-                                {sub.title}
-                              </Link>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                }
-
-                const active = isActive(item.href!);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href!}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      borderRadius: "6px",
-                      padding: "6px 12px",
-                      fontSize: "14px",
-                      fontWeight: 500,
-                      textDecoration: "none",
-                      cursor: "pointer",
-                      backgroundColor: active ? "rgba(63,142,252,0.1)" : "transparent",
-                      color: active ? "#3f8efc" : "#6b7280",
-                      transition: "all 150ms ease",
+        {/* Desktop nav */}
+        <nav ref={navRef} className="hidden items-center gap-1 lg:flex">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            if (item.subItems) {
+              const active = isSubMenuActive(item.subItems);
+              return (
+                <div key={item.title} className="relative">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setOpenMenu(openMenu === item.title ? null : item.title);
                     }}
-                    onMouseEnter={(e) => {
-                      if (!active) {
-                        e.currentTarget.style.backgroundColor = "#f3f4f6";
-                        e.currentTarget.style.color = "#111827";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!active) {
-                        e.currentTarget.style.backgroundColor = "transparent";
-                        e.currentTarget.style.color = "#6b7280";
-                      }
-                    }}
+                    className={cn(
+                      navLink,
+                      active
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                    )}
                   >
-                    <Icon style={{ width: "16px", height: "16px" }} />
+                    <Icon className="h-4 w-4" />
                     {item.title}
-                  </Link>
-                );
-              })}
-            </nav>
-
-            {/* Right: Icon buttons */}
-            <div
-              className="desktop-nav"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-              }}
-            >
-              {/* 도토리 */}
-              <a
-                href={hubUrls.myAcorns}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  position: "relative",
-                  display: "flex",
-                  height: "36px",
-                  width: "36px",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: "50%",
-                  border: "none",
-                  background: "none",
-                  color: "#6b7280",
-                  cursor: "pointer",
-                  transition: "all 150ms ease",
-                }}
-                title="내 도토리"
-              >
-                <Acorn style={{ width: "20px", height: "20px" }} />
-              </a>
-              {/* 결제 */}
-              <a
-                href={hubUrls.products}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  position: "relative",
-                  display: "flex",
-                  height: "36px",
-                  width: "36px",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: "50%",
-                  border: "none",
-                  background: "none",
-                  color: "#3f8efc",
-                  cursor: "pointer",
-                  transition: "all 150ms ease",
-                }}
-                title="이용권 구매"
-              >
-                <WonCircle style={{ width: "20px", height: "20px" }} />
-              </a>
-              {/* 알림 */}
-              <button
-                type="button"
-                style={{
-                  position: "relative",
-                  display: "flex",
-                  height: "36px",
-                  width: "36px",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: "50%",
-                  border: "none",
-                  background: "none",
-                  color: "#6b7280",
-                  cursor: "pointer",
-                  transition: "all 150ms ease",
-                }}
-                title="알림"
-              >
-                <Bell style={{ width: "20px", height: "20px" }} />
-              </button>
-              {/* 계정연동 */}
-              <a
-                href={hubUrls.accountLinkage}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  position: "relative",
-                  display: "flex",
-                  height: "36px",
-                  width: "36px",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: "50%",
-                  border: "none",
-                  background: "none",
-                  color: "#6b7280",
-                  cursor: "pointer",
-                  transition: "all 150ms ease",
-                }}
-                title="계정연동"
-              >
-                <Users style={{ width: "20px", height: "20px" }} />
-              </a>
-              {/* 사용자 드롭다운 */}
-              <div style={{ position: "relative", marginLeft: "4px" }}>
-                <button
-                  type="button"
-                  onClick={() => setUserOpen(!userOpen)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    borderRadius: "6px",
-                    padding: "6px 12px",
-                    fontSize: "14px",
-                    fontWeight: 500,
-                    border: "none",
-                    background: "none",
-                    color: "#374151",
-                    cursor: "pointer",
-                    transition: "all 150ms ease",
-                  }}
-                >
-                  <span>선생님</span>
-                  <ChevronDown style={{ width: "14px", height: "14px", color: "#9ca3af" }} />
-                </button>
-                {userOpen && (
-                  <>
-                    <div
-                      style={{ position: "fixed", inset: 0, zIndex: 99998 }}
-                      onClick={() => setUserOpen(false)}
+                    <ChevronDown
+                      className={cn(
+                        "h-3 w-3 transition-transform",
+                        openMenu === item.title && "rotate-180",
+                      )}
                     />
-                    <div
-                      style={{
-                        position: "absolute",
-                        right: 0,
-                        top: "100%",
-                        marginTop: "4px",
-                        width: "180px",
-                        borderRadius: "10px",
-                        border: "1px solid #e5e7eb",
-                        backgroundColor: "#ffffff",
-                        padding: "4px 0",
-                        boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
-                        zIndex: 99999,
-                      }}
-                    >
-                      <a
-                        href={hubUrls.profile}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          height: "36px",
-                          padding: "0 14px",
-                          fontSize: "14px",
-                          color: "#374151",
-                          textDecoration: "none",
-                          borderRadius: "6px",
-                          margin: "0 4px",
-                          transition: "background-color 150ms ease",
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f3f4f6")}
-                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                      >
-                        마이 페이지
-                      </a>
-                      <a
-                        href={hubUrls.payment}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          height: "36px",
-                          padding: "0 14px",
-                          fontSize: "14px",
-                          color: "#374151",
-                          textDecoration: "none",
-                          borderRadius: "6px",
-                          margin: "0 4px",
-                          transition: "background-color 150ms ease",
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f3f4f6")}
-                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                      >
-                        결제내역
-                      </a>
-                      <div style={{ height: "1px", backgroundColor: "#e5e7eb", margin: "4px 0" }} />
-                      <button
-                        type="button"
-                        onClick={handleLogout}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          height: "36px",
-                          padding: "0 14px",
-                          fontSize: "14px",
-                          color: "#ef4444",
-                          border: "none",
-                          background: "none",
-                          width: "calc(100% - 8px)",
-                          borderRadius: "6px",
-                          margin: "0 4px",
-                          cursor: "pointer",
-                          transition: "background-color 150ms ease",
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#fef2f2")}
-                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                      >
-                        로그아웃
-                      </button>
+                  </button>
+                  {openMenu === item.title && (
+                    <div className="absolute left-0 top-full mt-1 w-40 overflow-hidden rounded-lg border bg-card py-1 shadow-lg">
+                      {item.subItems.map((sub) => {
+                        const subActive = isActive(sub.href);
+                        return (
+                          <Link
+                            key={sub.href}
+                            href={sub.href}
+                            onClick={() => setOpenMenu(null)}
+                            className={cn(
+                              "block px-4 py-2 text-sm transition-colors",
+                              subActive
+                                ? "bg-primary/10 font-semibold text-primary"
+                                : "text-muted-foreground hover:bg-accent",
+                            )}
+                          >
+                            {sub.title}
+                          </Link>
+                        );
+                      })}
                     </div>
-                  </>
+                  )}
+                </div>
+              );
+            }
+            const active = isActive(item.href!);
+            return (
+              <Link
+                key={item.href}
+                href={item.href!}
+                className={cn(
+                  navLink,
+                  active
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
                 )}
-              </div>
-            </div>
+              >
+                <Icon className="h-4 w-4" />
+                {item.title}
+              </Link>
+            );
+          })}
+        </nav>
 
-            {/* Mobile hamburger */}
+        {/* Right icons (desktop) */}
+        <div className="hidden items-center gap-1 lg:flex">
+          <a
+            href={hubUrls.myAcorns}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="내 도토리"
+            className={iconBtn}
+          >
+            <Acorn className="h-5 w-5" />
+          </a>
+          <a
+            href={hubUrls.products}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="이용권 구매"
+            className={cn(iconBtn, "text-primary")}
+          >
+            <WonCircle className="h-5 w-5" />
+          </a>
+          <button type="button" title="알림" className={iconBtn}>
+            <Bell className="h-5 w-5" />
+          </button>
+          <a
+            href={hubUrls.accountLinkage}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="계정연동"
+            className={iconBtn}
+          >
+            <Users className="h-5 w-5" />
+          </a>
+
+          {/* User dropdown */}
+          <div className="relative ml-1">
             <button
               type="button"
-              className="mobile-only"
-              onClick={() => setMobileOpen(!mobileOpen)}
-              style={{
-                display: "none",
-                padding: "8px",
-                border: "none",
-                background: "none",
-                color: "#6b7280",
-                cursor: "pointer",
-              }}
+              onClick={() => setUserOpen(!userOpen)}
+              className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-accent"
             >
-              {mobileOpen ? (
-                <X style={{ width: "20px", height: "20px" }} />
-              ) : (
-                <Menu style={{ width: "20px", height: "20px" }} />
-              )}
+              <span>선생님</span>
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
             </button>
+            {userOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setUserOpen(false)}
+                />
+                <div className="absolute right-0 top-full z-50 mt-1 w-44 overflow-hidden rounded-lg border bg-card py-1 shadow-lg">
+                  <a
+                    href={hubUrls.profile}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block px-4 py-2 text-sm text-foreground transition-colors hover:bg-accent"
+                  >
+                    마이 페이지
+                  </a>
+                  <a
+                    href={hubUrls.payment}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block px-4 py-2 text-sm text-foreground transition-colors hover:bg-accent"
+                  >
+                    결제내역
+                  </a>
+                  <div className="my-1 border-t" />
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    로그아웃
+                  </button>
+                </div>
+              </>
+            )}
           </div>
-
-          {/* Mobile Menu */}
-          {mobileOpen && (
-            <div
-              className="mobile-only"
-              style={{
-                display: "none",
-                borderTop: "1px solid #e5e7eb",
-                paddingBottom: "12px",
-                paddingTop: "8px",
-              }}
-            >
-              <nav style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  if (item.subItems) {
-                    return (
-                      <div key={item.title}>
-                        <div
-                          style={{
-                            padding: "8px 12px",
-                            fontSize: "12px",
-                            fontWeight: 600,
-                            color: "#9ca3af",
-                            textTransform: "uppercase",
-                          }}
-                        >
-                          {item.title}
-                        </div>
-                        {item.subItems.map((sub) => {
-                          const subActive = isActive(sub.href);
-                          return (
-                            <Link
-                              key={sub.href}
-                              href={sub.href}
-                              onClick={() => setMobileOpen(false)}
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "8px",
-                                borderRadius: "6px",
-                                padding: "8px 20px",
-                                fontSize: "14px",
-                                textDecoration: "none",
-                                color: subActive ? "#4f46e5" : "#6b7280",
-                                backgroundColor: subActive ? "#eef2ff" : "transparent",
-                                fontWeight: subActive ? 500 : 400,
-                                cursor: "pointer",
-                              }}
-                            >
-                              {sub.title}
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    );
-                  }
-
-                  const active = isActive(item.href!);
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href!}
-                      onClick={() => setMobileOpen(false)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        borderRadius: "6px",
-                        padding: "8px 12px",
-                        fontSize: "14px",
-                        fontWeight: 500,
-                        textDecoration: "none",
-                        color: active ? "#4f46e5" : "#6b7280",
-                        backgroundColor: active ? "#eef2ff" : "transparent",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <Icon style={{ width: "16px", height: "16px" }} />
-                      {item.title}
-                    </Link>
-                  );
-                })}
-              </nav>
-              <div
-                style={{
-                  marginTop: "12px",
-                  borderTop: "1px solid #f3f4f6",
-                  paddingTop: "12px",
-                  paddingLeft: "12px",
-                  paddingRight: "12px",
-                }}
-              >
-                <a
-                  href={hubUrls.profile}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => setMobileOpen(false)}
-                  style={{
-                    display: "flex",
-                    width: "100%",
-                    alignItems: "center",
-                    gap: "8px",
-                    borderRadius: "6px",
-                    padding: "8px 12px",
-                    fontSize: "14px",
-                    color: "#6b7280",
-                    textDecoration: "none",
-                  }}
-                >
-                  마이 페이지
-                </a>
-                <a
-                  href={hubUrls.payment}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => setMobileOpen(false)}
-                  style={{
-                    display: "flex",
-                    width: "100%",
-                    alignItems: "center",
-                    gap: "8px",
-                    borderRadius: "6px",
-                    padding: "8px 12px",
-                    fontSize: "14px",
-                    color: "#6b7280",
-                    textDecoration: "none",
-                  }}
-                >
-                  결제내역
-                </a>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  style={{
-                    display: "flex",
-                    width: "100%",
-                    alignItems: "center",
-                    gap: "8px",
-                    borderRadius: "6px",
-                    padding: "8px 12px",
-                    fontSize: "14px",
-                    color: "#ef4444",
-                    border: "none",
-                    background: "none",
-                    cursor: "pointer",
-                  }}
-                >
-                  <LogOut style={{ width: "16px", height: "16px" }} />
-                  로그아웃
-                </button>
-              </div>
-            </div>
-          )}
         </div>
-      </header>
 
-      {/* Responsive styles */}
-      <style jsx global>{`
-        @media (max-width: 1023px) {
-          .desktop-nav {
-            display: none !important;
-          }
-          .mobile-only {
-            display: flex !important;
-          }
-        }
-        @media (min-width: 1024px) {
-          .mobile-only {
-            display: none !important;
-          }
-        }
-      `}</style>
-    </>
+        {/* Mobile hamburger */}
+        <button
+          type="button"
+          onClick={() => setMobileOpen(!mobileOpen)}
+          className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground lg:hidden"
+          aria-label="메뉴"
+        >
+          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
+      </div>
+
+      {/* Mobile menu */}
+      {mobileOpen && (
+        <div className="border-t lg:hidden">
+          <nav className="mx-auto max-w-[1280px] space-y-1 px-4 py-3">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              if (item.subItems) {
+                return (
+                  <div key={item.title}>
+                    <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {item.title}
+                    </div>
+                    {item.subItems.map((sub) => {
+                      const subActive = isActive(sub.href);
+                      return (
+                        <Link
+                          key={sub.href}
+                          href={sub.href}
+                          onClick={() => setMobileOpen(false)}
+                          className={cn(
+                            "block rounded-md px-5 py-2 text-sm transition-colors",
+                            subActive
+                              ? "bg-primary/10 font-medium text-primary"
+                              : "text-muted-foreground hover:bg-accent",
+                          )}
+                        >
+                          {sub.title}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                );
+              }
+              const active = isActive(item.href!);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href!}
+                  onClick={() => setMobileOpen(false)}
+                  className={cn(
+                    "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    active
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-accent",
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.title}
+                </Link>
+              );
+            })}
+            <div className="mt-2 space-y-1 border-t pt-2">
+              <a
+                href={hubUrls.profile}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setMobileOpen(false)}
+                className="block rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent"
+              >
+                마이 페이지
+              </a>
+              <a
+                href={hubUrls.payment}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setMobileOpen(false)}
+                className="block rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent"
+              >
+                결제내역
+              </a>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-destructive hover:bg-destructive/10"
+              >
+                <LogOut className="h-4 w-4" />
+                로그아웃
+              </button>
+            </div>
+          </nav>
+        </div>
+      )}
+    </header>
   );
 }

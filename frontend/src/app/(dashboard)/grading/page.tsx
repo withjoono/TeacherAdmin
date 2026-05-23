@@ -2,14 +2,21 @@
 
 import { useState, useEffect } from "react";
 import { CheckSquare, Users } from "lucide-react";
-import { Header } from "@/components/layout/header";
-import { Button } from "geobuk-shared/ui";
-import { Input } from "geobuk-shared/ui";
+import { PageContainer } from "@/components/ui/page-container";
+import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "geobuk-shared/ui";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useAuthStore } from "@/lib/auth";
 import { mockExamApi, gradingApi, type MockExam, type GradeResult } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 const subjectOptions = [
   { value: "국어", label: "국어" },
@@ -119,177 +126,178 @@ export default function GradingPage() {
   const questionCount = selectedSubject === "영어" ? 45 : selectedSubject === "한국사" ? 20 : 45;
 
   return (
-    <div className="flex flex-col">
-      <Header title="채점 관리" />
+    <PageContainer className="space-y-6">
+      <PageHeader
+        title="채점 관리"
+        description="모의고사 답안을 입력하고 채점 결과를 확인하세요."
+      />
 
-      <div className="flex-1 p-6">
-        <div className="grid gap-6 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CheckSquare className="h-5 w-5" />
-                답안 입력
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-6 grid gap-4 sm:grid-cols-3">
-                <div className="space-y-2">
-                  <Label>시험 선택</Label>
-                  <Select
-                    options={examOptions}
-                    placeholder="시험을 선택하세요"
-                    value={selectedExamId}
-                    onChange={(e) => {
-                      setSelectedExamId(e.target.value);
-                      resetForm();
-                    }}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>과목</Label>
-                  <Select
-                    options={subjectOptions}
-                    placeholder="과목을 선택하세요"
-                    value={selectedSubject}
-                    onChange={(e) => {
-                      setSelectedSubject(e.target.value);
-                      resetForm();
-                    }}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>학생 ID (선택)</Label>
-                  <Input
-                    type="number"
-                    placeholder="점수 저장시 입력"
-                    value={studentId}
-                    onChange={(e) => setStudentId(e.target.value)}
-                  />
-                </div>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckSquare className="h-5 w-5 text-primary" />
+              답안 입력
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-6 grid gap-4 sm:grid-cols-3">
+              <div className="space-y-2">
+                <Label>시험 선택</Label>
+                <Select
+                  options={examOptions}
+                  placeholder="시험을 선택하세요"
+                  value={selectedExamId}
+                  onChange={(e) => {
+                    setSelectedExamId(e.target.value);
+                    resetForm();
+                  }}
+                />
               </div>
 
-              {selectedExamId && selectedSubject && (
-                <>
-                  <div className="mb-4 rounded-lg bg-muted p-3 text-sm">
-                    <p>1-5 사이의 숫자로 답안을 입력하세요. (빈칸은 무시됩니다)</p>
-                  </div>
+              <div className="space-y-2">
+                <Label>과목</Label>
+                <Select
+                  options={subjectOptions}
+                  placeholder="과목을 선택하세요"
+                  value={selectedSubject}
+                  onChange={(e) => {
+                    setSelectedSubject(e.target.value);
+                    resetForm();
+                  }}
+                />
+              </div>
 
-                  <div className="grid grid-cols-5 gap-2 sm:grid-cols-9 md:grid-cols-10">
-                    {Array.from({ length: questionCount }, (_, i) => i + 1).map(
-                      (num) => (
-                        <div key={num} className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">
-                            {num}번
-                          </Label>
-                          <Input
-                            type="number"
-                            min={1}
-                            max={5}
-                            className="h-9 text-center"
-                            value={answers[num] || ""}
-                            onChange={(e) =>
-                              handleAnswerChange(num, e.target.value)
-                            }
-                          />
-                        </div>
-                      )
-                    )}
-                  </div>
+              <div className="space-y-2">
+                <Label>학생 ID (선택)</Label>
+                <Input
+                  type="number"
+                  placeholder="점수 저장시 입력"
+                  value={studentId}
+                  onChange={(e) => setStudentId(e.target.value)}
+                />
+              </div>
+            </div>
 
-                  <div className="mt-6 flex gap-4">
-                    <Button
-                      onClick={handleGrade}
-                      disabled={isGrading || Object.keys(answers).length === 0}
-                    >
-                      {isGrading ? "채점 중..." : "채점하기"}
-                    </Button>
-                    <Button variant="outline" onClick={resetForm}>
-                      초기화
-                    </Button>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
+            {selectedExamId && selectedSubject && (
+              <>
+                <div className="mb-4 rounded-lg bg-muted p-3 text-sm text-muted-foreground">
+                  <p>1-5 사이의 숫자로 답안을 입력하세요. (빈칸은 무시됩니다)</p>
+                </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>채점 결과</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {result ? (
-                <div className="space-y-4">
-                  <div className="rounded-lg bg-primary/10 p-4 text-center">
-                    <p className="text-sm text-muted-foreground">획득 점수</p>
-                    <p className="text-3xl font-bold text-primary">
-                      {result.earnedScore}
-                      <span className="text-lg font-normal text-muted-foreground">
-                        /{result.totalScore}
-                      </span>
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div className="rounded-lg bg-muted p-3 text-center">
-                      <p className="text-muted-foreground">정답 수</p>
-                      <p className="text-xl font-semibold text-green-600">
-                        {result.correctCount}
-                      </p>
-                    </div>
-                    <div className="rounded-lg bg-muted p-3 text-center">
-                      <p className="text-muted-foreground">오답 수</p>
-                      <p className="text-xl font-semibold text-red-600">
-                        {result.totalQuestions - result.correctCount}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="max-h-64 overflow-auto">
-                    <p className="mb-2 text-sm font-medium">문제별 결과</p>
-                    <div className="space-y-1">
-                      {result.results.map((r) => (
-                        <div
-                          key={r.questionNumber}
-                          className={`flex items-center justify-between rounded px-2 py-1 text-sm ${
-                            r.isCorrect ? "bg-green-50" : "bg-red-50"
-                          }`}
-                        >
-                          <span>{r.questionNumber}번</span>
-                          <span>
-                            {r.studentAnswer} → {r.correctAnswer}
-                          </span>
-                          <span
-                            className={
-                              r.isCorrect ? "text-green-600" : "text-red-600"
-                            }
-                          >
-                            {r.isCorrect ? "O" : "X"}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {studentId && (
-                    <div className="rounded-lg bg-green-500/10 p-3 text-center text-sm text-green-600">
-                      학생 ID {studentId}의 점수가 저장되었습니다.
-                    </div>
+                <div className="grid grid-cols-5 gap-2 sm:grid-cols-9 md:grid-cols-10">
+                  {Array.from({ length: questionCount }, (_, i) => i + 1).map(
+                    (num) => (
+                      <div key={num} className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">
+                          {num}번
+                        </Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={5}
+                          className="h-9 text-center"
+                          value={answers[num] || ""}
+                          onChange={(e) =>
+                            handleAnswerChange(num, e.target.value)
+                          }
+                        />
+                      </div>
+                    )
                   )}
                 </div>
-              ) : (
-                <div className="py-8 text-center text-muted-foreground">
-                  <Users className="mx-auto mb-2 h-12 w-12 opacity-50" />
-                  <p>답안을 입력하고 채점하면</p>
-                  <p>결과가 여기에 표시됩니다.</p>
+
+                <div className="mt-6 flex gap-3">
+                  <Button
+                    onClick={handleGrade}
+                    disabled={isGrading || Object.keys(answers).length === 0}
+                  >
+                    {isGrading ? "채점 중..." : "채점하기"}
+                  </Button>
+                  <Button variant="outline" onClick={resetForm}>
+                    초기화
+                  </Button>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>채점 결과</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {result ? (
+              <div className="space-y-4">
+                <div className="rounded-xl bg-primary/10 p-4 text-center">
+                  <p className="text-sm text-muted-foreground">획득 점수</p>
+                  <p className="text-3xl font-bold text-primary">
+                    {result.earnedScore}
+                    <span className="text-lg font-normal text-muted-foreground">
+                      /{result.totalScore}
+                    </span>
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="rounded-lg bg-muted p-3 text-center">
+                    <p className="text-muted-foreground">정답 수</p>
+                    <p className="text-xl font-semibold text-emerald-600">
+                      {result.correctCount}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-muted p-3 text-center">
+                    <p className="text-muted-foreground">오답 수</p>
+                    <p className="text-xl font-semibold text-rose-600">
+                      {result.totalQuestions - result.correctCount}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="max-h-64 overflow-auto">
+                  <p className="mb-2 text-sm font-medium text-foreground">
+                    문제별 결과
+                  </p>
+                  <div className="space-y-1">
+                    {result.results.map((r) => (
+                      <div
+                        key={r.questionNumber}
+                        className={cn(
+                          "flex items-center justify-between rounded-lg px-2 py-1 text-sm",
+                          r.isCorrect
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-rose-50 text-rose-700"
+                        )}
+                      >
+                        <span>{r.questionNumber}번</span>
+                        <span>
+                          {r.studentAnswer} → {r.correctAnswer}
+                        </span>
+                        <span className="font-semibold">
+                          {r.isCorrect ? "O" : "X"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {studentId && (
+                  <div className="rounded-lg bg-emerald-50 p-3 text-center text-sm text-emerald-700">
+                    학생 ID {studentId}의 점수가 저장되었습니다.
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="py-8 text-center text-muted-foreground">
+                <Users className="mx-auto mb-2 h-12 w-12 opacity-50" />
+                <p>답안을 입력하고 채점하면</p>
+                <p>결과가 여기에 표시됩니다.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
-    </div>
+    </PageContainer>
   );
 }
-

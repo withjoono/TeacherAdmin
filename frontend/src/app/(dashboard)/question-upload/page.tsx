@@ -9,6 +9,16 @@ import {
   AlertCircle,
   FileText,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { PageContainer } from "@/components/ui/page-container";
+import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 // Mock 데이터
 const mockUploadHistory = [
@@ -57,148 +67,206 @@ export default function QuestionUploadPage() {
   };
 
   return (
-    <div className="gb-page-dashboard gb-stack gb-stack-8" style={{ paddingTop: "var(--space-10)" }}>
-      {/* 페이지 헤더 */}
-      <div className="gb-page-header" style={{ marginBottom: 0 }}>
-        <h1 className="gb-page-title">문제 업로드</h1>
-        <p className="gb-page-desc">문제 데이터를 엑셀 또는 CSV 형식으로 일괄 업로드하세요</p>
-      </div>
+    <PageContainer className="space-y-6">
+      <PageHeader
+        title="문제 업로드"
+        description="문제 데이터를 엑셀 또는 CSV 형식으로 일괄 업로드하세요."
+      />
 
-      <div className="gb-stack gb-stack-6">
-        {/* 가이드 박스 */}
-        <div className="gb-grid gb-grid-3">
-          <div className="gb-card" style={{ padding: "var(--space-6)", background: "var(--color-primary-50, var(--color-bg-secondary))", borderColor: "color-mix(in srgb, var(--color-primary) 20%, transparent)" }}>
-            <FileSpreadsheet style={{ width: 32, height: 32, color: "var(--color-primary)", marginBottom: "var(--space-3)" }} />
-            <h3 style={{ fontSize: "var(--text-base)", fontWeight: "var(--weight-semibold)", marginBottom: "var(--space-2)" }}>Excel 형식</h3>
-            <p style={{ fontSize: "var(--text-sm)", color: "var(--color-text-secondary)" }}>.xlsx, .xls 파일 지원</p>
-          </div>
+      {/* 가이드 카드 */}
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardContent className="p-6">
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+              <FileSpreadsheet className="h-6 w-6" />
+            </div>
+            <h3 className="mb-1 text-base font-semibold text-foreground">
+              Excel 형식
+            </h3>
+            <p className="text-sm text-muted-foreground">.xlsx, .xls 파일 지원</p>
+          </CardContent>
+        </Card>
 
-          <div className="gb-card" style={{ padding: "var(--space-6)", background: "var(--color-success-10)", borderColor: "color-mix(in srgb, var(--color-success) 20%, transparent)" }}>
-            <FileText style={{ width: 32, height: 32, color: "var(--color-success)", marginBottom: "var(--space-3)" }} />
-            <h3 style={{ fontSize: "var(--text-base)", fontWeight: "var(--weight-semibold)", marginBottom: "var(--space-2)" }}>CSV 형식</h3>
-            <p style={{ fontSize: "var(--text-sm)", color: "var(--color-text-secondary)" }}>.csv 파일 지원</p>
-          </div>
+        <Card>
+          <CardContent className="p-6">
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+              <FileText className="h-6 w-6" />
+            </div>
+            <h3 className="mb-1 text-base font-semibold text-foreground">
+              CSV 형식
+            </h3>
+            <p className="text-sm text-muted-foreground">.csv 파일 지원</p>
+          </CardContent>
+        </Card>
 
-          <div className="gb-card" style={{ padding: "var(--space-6)", background: "var(--color-warning-10)", borderColor: "color-mix(in srgb, var(--color-warning) 20%, transparent)" }}>
-            <Download style={{ width: 32, height: 32, color: "var(--color-warning)", marginBottom: "var(--space-3)" }} />
-            <h3 style={{ fontSize: "var(--text-base)", fontWeight: "var(--weight-semibold)", marginBottom: "var(--space-2)" }}>템플릿 다운로드</h3>
-            <button className="gb-btn gb-btn-outline" style={{ marginTop: "var(--space-2)", height: "32px", fontSize: "var(--text-xs)" }}>
+        <Card>
+          <CardContent className="p-6">
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+              <Download className="h-6 w-6" />
+            </div>
+            <h3 className="mb-2 text-base font-semibold text-foreground">
+              템플릿 다운로드
+            </h3>
+            <Button variant="outline" size="sm">
               템플릿 받기
-            </button>
-          </div>
-        </div>
+            </Button>
+          </CardContent>
+        </Card>
+      </section>
 
-        {/* 파일 업로드 영역 */}
-        <div className="gb-card">
-          <h2 className="gb-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Upload style={{ width: 18, height: 18, color: 'var(--color-primary)' }}/>
+      {/* 파일 업로드 영역 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Upload className="h-5 w-5 text-primary" />
             파일 업로드
-          </h2>
-          
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
           <div
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            style={{
-              border: "2px dashed",
-              borderRadius: "var(--radius-lg)",
-              padding: "var(--space-12) var(--space-6)",
-              textAlign: "center",
-              transition: "all var(--transition-short)",
-              borderColor: isDragging ? "var(--color-primary)" : "var(--color-border)",
-              background: isDragging ? "var(--color-primary-50, var(--color-bg-secondary))" : "transparent"
-            }}
+            className={cn(
+              "rounded-xl border-2 border-dashed px-6 py-12 text-center transition-colors",
+              isDragging ? "border-primary bg-primary/5" : "border-border"
+            )}
           >
-            <Upload style={{ width: 48, height: 48, margin: "0 auto var(--space-4)", color: "var(--color-text-disabled)" }} />
-            <h3 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--weight-semibold)", marginBottom: "var(--space-2)" }}>
+            <Upload className="mx-auto mb-4 h-12 w-12 text-muted-foreground/50" />
+            <h3 className="mb-1 text-lg font-semibold text-foreground">
               파일을 드래그하여 업로드
             </h3>
-            <p style={{ fontSize: "var(--text-sm)", color: "var(--color-text-secondary)", marginBottom: "var(--space-4)" }}>
+            <p className="mb-4 text-sm text-muted-foreground">
               또는 아래 버튼을 클릭하여 파일을 선택하세요
             </p>
-            <button className="gb-btn gb-btn-primary" style={{ margin: "0 auto", padding: "0 var(--space-6)" }}>
-              <Upload style={{ width: 16, height: 16 }} />
+            <Button>
+              <Upload className="h-4 w-4" />
               파일 선택
-            </button>
-            <p style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)", marginTop: "var(--space-4)" }}>
+            </Button>
+            <p className="mt-4 text-xs text-muted-foreground">
               지원 형식: Excel (.xlsx, .xls), CSV (.csv) | 최대 10MB
             </p>
           </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* 안내사항 */}
-        <div className="gb-card">
-          <h2 className="gb-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FileText style={{ width: 18, height: 18, color: 'var(--color-primary)' }}/>
+      {/* 안내사항 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5 text-primary" />
             파일 형식 안내
-          </h2>
-          
-          <div className="gb-stack gb-stack-4">
-            <div style={{ padding: "var(--space-4)", background: "var(--color-bg-secondary)", borderRadius: "var(--radius-lg)" }}>
-              <h4 style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-bold)", marginBottom: "var(--space-2)" }}>필수 컬럼</h4>
-              <ul style={{ listStyle: "none", padding: 0, margin: 0, fontSize: "var(--text-sm)", color: "var(--color-text-secondary)" }} className="gb-stack gb-stack-1">
-                <li style={{ display: "flex", gap: "8px" }}><span style={{ color: "var(--color-primary)" }}>•</span> <strong>문제번호</strong>: 1, 2, 3...</li>
-                <li style={{ display: "flex", gap: "8px" }}><span style={{ color: "var(--color-primary)" }}>•</span> <strong>문제내용</strong>: 문제 텍스트</li>
-                <li style={{ display: "flex", gap: "8px" }}><span style={{ color: "var(--color-primary)" }}>•</span> <strong>정답</strong>: 정답 (객관식: 1~5, 주관식: 텍스트)</li>
-                <li style={{ display: "flex", gap: "8px" }}><span style={{ color: "var(--color-primary)" }}>•</span> <strong>배점</strong>: 점수 (예: 5)</li>
-              </ul>
-            </div>
-            
-            <div style={{ padding: "var(--space-4)", background: "var(--color-bg-secondary)", borderRadius: "var(--radius-lg)" }}>
-              <h4 style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-bold)", marginBottom: "var(--space-2)" }}>선택 컬럼</h4>
-              <ul style={{ listStyle: "none", padding: 0, margin: 0, fontSize: "var(--text-sm)", color: "var(--color-text-secondary)" }} className="gb-stack gb-stack-1">
-                <li style={{ display: "flex", gap: "8px" }}><span style={{ color: "var(--color-text-tertiary)" }}>•</span> <strong>문제유형</strong>: 객관식, 주관식, 서술형</li>
-                <li style={{ display: "flex", gap: "8px" }}><span style={{ color: "var(--color-text-tertiary)" }}>•</span> <strong>난이도</strong>: 상, 중, 하</li>
-                <li style={{ display: "flex", gap: "8px" }}><span style={{ color: "var(--color-text-tertiary)" }}>•</span> <strong>선지1~5</strong>: 객관식 선지 (객관식인 경우)</li>
-              </ul>
-            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-lg bg-muted p-4">
+            <h4 className="mb-2 text-sm font-bold text-foreground">필수 컬럼</h4>
+            <ul className="space-y-1 text-sm text-muted-foreground">
+              <li className="flex gap-2">
+                <span className="text-primary">•</span>
+                <span>
+                  <strong className="text-foreground">문제번호</strong>: 1, 2, 3...
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary">•</span>
+                <span>
+                  <strong className="text-foreground">문제내용</strong>: 문제 텍스트
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary">•</span>
+                <span>
+                  <strong className="text-foreground">정답</strong>: 정답 (객관식:
+                  1~5, 주관식: 텍스트)
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary">•</span>
+                <span>
+                  <strong className="text-foreground">배점</strong>: 점수 (예: 5)
+                </span>
+              </li>
+            </ul>
           </div>
-        </div>
 
-        {/* 업로드 히스토리 */}
-        <div className="gb-card">
-          <h2 className="gb-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FileSpreadsheet style={{ width: 18, height: 18, color: 'var(--color-primary)' }}/>
+          <div className="rounded-lg bg-muted p-4">
+            <h4 className="mb-2 text-sm font-bold text-foreground">선택 컬럼</h4>
+            <ul className="space-y-1 text-sm text-muted-foreground">
+              <li className="flex gap-2">
+                <span className="text-muted-foreground">•</span>
+                <span>
+                  <strong className="text-foreground">문제유형</strong>: 객관식,
+                  주관식, 서술형
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-muted-foreground">•</span>
+                <span>
+                  <strong className="text-foreground">난이도</strong>: 상, 중, 하
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-muted-foreground">•</span>
+                <span>
+                  <strong className="text-foreground">선지1~5</strong>: 객관식 선지
+                  (객관식인 경우)
+                </span>
+              </li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 업로드 히스토리 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileSpreadsheet className="h-5 w-5 text-primary" />
             업로드 기록
-          </h2>
-          
-          <div className="gb-stack gb-stack-3">
-            {mockUploadHistory.map((history) => (
-              <div
-                key={history.id}
-                style={{
-                  display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px",
-                  padding: "var(--space-4)", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border-light)", transition: "background var(--transition-short)"
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = "var(--color-bg-secondary)"}
-                onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                  {history.status === "성공" ? (
-                    <CheckCircle2 style={{ width: 32, height: 32, color: "var(--color-success)" }} />
-                  ) : (
-                    <AlertCircle style={{ width: 32, height: 32, color: "var(--color-error)" }} />
-                  )}
-                  <div>
-                    <p style={{ fontSize: "var(--text-base)", fontWeight: "var(--weight-medium)", color: "var(--color-text)" }}>{history.fileName}</p>
-                    <p style={{ fontSize: "var(--text-sm)", color: "var(--color-text-tertiary)", marginTop: "4px" }}>
-                      {history.uploadDate} | {history.uploader} | {history.questionCount}문항
-                    </p>
-                  </div>
-                </div>
-                <div className="gb-row gb-row-3">
-                  <span className={`gb-badge ${history.status === "성공" ? "gb-badge-success" : "gb-badge-error"}`}>
-                    {history.status}
-                  </span>
-                  <button className="gb-btn gb-btn-outline" style={{ height: "36px" }}>
-                    상세보기
-                  </button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {mockUploadHistory.map((history) => (
+            <div
+              key={history.id}
+              className="flex flex-wrap items-center justify-between gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/40"
+            >
+              <div className="flex items-center gap-4">
+                {history.status === "성공" ? (
+                  <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+                ) : (
+                  <AlertCircle className="h-8 w-8 text-rose-600" />
+                )}
+                <div>
+                  <p className="font-medium text-foreground">
+                    {history.fileName}
+                  </p>
+                  <p className="mt-0.5 text-sm text-muted-foreground">
+                    {history.uploadDate} | {history.uploader} |{" "}
+                    {history.questionCount}문항
+                  </p>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
+              <div className="flex items-center gap-3">
+                <span
+                  className={cn(
+                    "rounded-full px-2.5 py-0.5 text-xs font-medium",
+                    history.status === "성공"
+                      ? "bg-emerald-50 text-emerald-600"
+                      : "bg-rose-50 text-rose-600"
+                  )}
+                >
+                  {history.status}
+                </span>
+                <Button variant="outline" size="sm">
+                  상세보기
+                </Button>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    </PageContainer>
   );
 }

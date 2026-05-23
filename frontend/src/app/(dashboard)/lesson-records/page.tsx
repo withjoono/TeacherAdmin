@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
-    BookOpen,
     Calendar,
     FileText,
     Loader2,
     Plus,
     CheckCircle2,
+    BookOpen,
 } from "lucide-react";
 import { getMyArenaClasses } from "@/lib/api/classes";
 import type { ArenaClass } from "@/lib/api/classes";
@@ -17,6 +17,20 @@ import {
     updateLessonPlan,
 } from "@/lib/api/teacher";
 import type { LessonPlan } from "@/lib/api/teacher";
+import { PageContainer } from "@/components/ui/page-container";
+import { PageHeader } from "@/components/ui/page-header";
+import { Spinner } from "@/components/ui/spinner";
+import { EmptyState } from "@/components/ui/empty-state";
+import {
+    Card,
+    CardHeader,
+    CardTitle,
+    CardContent,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 export default function LessonRecordsPage() {
     const [classes, setClasses] = useState<ArenaClass[]>([]);
@@ -124,188 +138,196 @@ export default function LessonRecordsPage() {
 
     if (loading) {
         return (
-            <div className="gb-page-dashboard gb-stack gb-stack-6" style={{ paddingTop: "var(--space-10)" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "300px" }}>
-                    <Loader2 style={{ width: 32, height: 32, color: "var(--color-text-disabled)", animation: "spin 1s linear infinite" }} />
-                </div>
-            </div>
+            <PageContainer className="space-y-6">
+                <Spinner full label="불러오는 중..." />
+            </PageContainer>
         );
     }
 
     return (
-        <div className="gb-page-dashboard gb-stack gb-stack-8" style={{ paddingTop: "var(--space-10)" }}>
-            {/* 페이지 헤더 */}
-            <div className="gb-page-header" style={{ marginBottom: 0 }}>
-                <h1 className="gb-page-title">수업 기록</h1>
-                <p className="gb-page-desc">매 수업마다 다룬 내용과 진도를 기록하세요</p>
-            </div>
+        <PageContainer className="space-y-6">
+            <PageHeader
+                title="수업 기록"
+                description="매 수업마다 다룬 내용과 진도를 기록하세요"
+            />
 
-            <div className="gb-stack gb-stack-6">
-                {/* 클래스 선택 */}
-                <div className="gb-card">
-                    <div style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)", color: "var(--color-text-tertiary)", marginBottom: "var(--space-3)" }}>
+            {/* 클래스 선택 */}
+            <Card>
+                <CardContent className="p-6">
+                    <p className="mb-3 text-sm font-semibold text-muted-foreground">
                         클래스 선택
-                    </div>
-                    <div className="gb-row gb-row-3" style={{ flexWrap: "wrap" }}>
+                    </p>
+                    <div className="flex flex-wrap gap-2">
                         {classes.map((cls) => (
-                            <button
+                            <Button
                                 key={cls.id}
+                                variant={
+                                    String(cls.id) === selectedClassId
+                                        ? "default"
+                                        : "outline"
+                                }
+                                size="sm"
                                 onClick={() => setSelectedClassId(String(cls.id))}
-                                className={`gb-btn ${String(cls.id) === selectedClassId ? 'gb-btn-primary' : 'gb-btn-outline'}`}
                             >
                                 {cls.name}
-                            </button>
+                            </Button>
                         ))}
                     </div>
-                </div>
+                </CardContent>
+            </Card>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "var(--space-6)", alignItems: "start" }}>
-                    {/* 좌측: 수업 계획 목록 */}
-                    <div className="gb-card" style={{ padding: "var(--space-6)" }}>
-                        <h2 className="gb-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: "var(--text-base)" }}>
-                            수업 계획 선택
-                        </h2>
-                        
+            <div className="grid items-start gap-6 lg:grid-cols-3">
+                {/* 좌측: 수업 계획 목록 */}
+                <Card className="lg:col-span-1">
+                    <CardHeader>
+                        <CardTitle className="text-base">수업 계획 선택</CardTitle>
+                    </CardHeader>
+                    <CardContent>
                         {plansLoading ? (
-                            <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-4) 0" }}>
-                                <Loader2 style={{ width: 20, height: 20, color: "var(--color-text-disabled)", animation: "spin 1s linear infinite" }} />
-                            </div>
+                            <Spinner />
                         ) : lessonPlans.length > 0 ? (
-                            <div className="gb-stack gb-stack-2">
-                                {lessonPlans.map((plan) => (
-                                    <button
-                                        key={plan.id}
-                                        onClick={() => setSelectedPlanId(plan.id)}
-                                        style={{
-                                            width: "100%", textAlign: "left", padding: "var(--space-3)", borderRadius: "var(--radius-md)", border: "1px solid", transition: "all var(--transition-short)", cursor: "pointer",
-                                            background: plan.id === selectedPlanId ? "var(--color-primary-50, var(--color-bg-secondary))" : "transparent",
-                                            borderColor: plan.id === selectedPlanId ? "color-mix(in srgb, var(--color-primary) 30%, transparent)" : "var(--color-border-light)",
-                                        }}
-                                        onMouseEnter={(e) => { if (plan.id !== selectedPlanId) e.currentTarget.style.background = "var(--color-bg-secondary)" }}
-                                        onMouseLeave={(e) => { if (plan.id !== selectedPlanId) e.currentTarget.style.background = "transparent" }}
-                                    >
-                                        <div style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)", color: "var(--color-text)" }}>{plan.title}</div>
-                                        <div className="gb-row gb-row-2" style={{ marginTop: "var(--space-2)" }}>
-                                            <div style={{ flex: 1, height: "6px", background: "var(--color-border-light)", borderRadius: "var(--radius-full)", overflow: "hidden" }}>
-                                                <div
-                                                    style={{ height: "100%", background: "linear-gradient(to right, #60a5fa, #2563eb)", borderRadius: "var(--radius-full)", transition: "width var(--transition-normal)", width: `${plan.progress || 0}%` }}
-                                                />
+                            <div className="space-y-2">
+                                {lessonPlans.map((plan) => {
+                                    const isSelected = plan.id === selectedPlanId;
+                                    return (
+                                        <button
+                                            key={plan.id}
+                                            onClick={() => setSelectedPlanId(plan.id)}
+                                            className={cn(
+                                                "w-full rounded-lg border p-3 text-left transition-colors",
+                                                isSelected
+                                                    ? "border-primary bg-accent"
+                                                    : "hover:bg-muted"
+                                            )}
+                                        >
+                                            <div className="text-sm font-medium text-foreground">
+                                                {plan.title}
                                             </div>
-                                            <span style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)" }}>
-                                                {plan.progress || 0}%
-                                            </span>
-                                        </div>
-                                    </button>
-                                ))}
+                                            <div className="mt-2 flex items-center gap-2">
+                                                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                                                    <div
+                                                        className="h-full rounded-full bg-primary transition-all"
+                                                        style={{
+                                                            width: `${plan.progress || 0}%`,
+                                                        }}
+                                                    />
+                                                </div>
+                                                <span className="text-xs text-muted-foreground">
+                                                    {plan.progress || 0}%
+                                                </span>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
                             </div>
                         ) : (
-                            <div className="gb-empty-state" style={{ padding: "var(--space-4) 0" }}>
-                                수업 계획이 없습니다
-                            </div>
+                            <EmptyState
+                                icon={BookOpen}
+                                title="수업 계획이 없습니다"
+                            />
                         )}
-                    </div>
+                    </CardContent>
+                </Card>
 
-                    {/* 우측: 기록 입력 폼 */}
-                    <div className="gb-card" style={{ padding: "var(--space-6)" }}>
-                        <h2 className="gb-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <FileText style={{ width: 18, height: 18, color: 'var(--color-primary)' }}/>
+                {/* 우측: 기록 입력 폼 */}
+                <Card className="lg:col-span-2">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <FileText className="h-[18px] w-[18px] text-primary" />
                             수업 기록 작성
                             {selectedPlan && (
-                                <span style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-normal)", color: "var(--color-text-tertiary)", marginLeft: "var(--space-2)" }}>
+                                <span className="ml-1 text-sm font-normal text-muted-foreground">
                                     — {selectedPlan.title}
                                 </span>
                             )}
-                        </h2>
-                        
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
                         {saved && (
-                            <div style={{ marginBottom: "var(--space-4)", padding: "var(--space-3)", borderRadius: "var(--radius-md)", background: "var(--color-success-10)", display: "flex", alignItems: "center", gap: "8px", color: "var(--color-success)", fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)" }}>
-                                <CheckCircle2 style={{ width: 16, height: 16 }} />
+                            <div className="flex items-center gap-2 rounded-lg bg-accent p-3 text-sm font-medium text-primary">
+                                <CheckCircle2 className="h-4 w-4" />
                                 수업 기록이 저장되었습니다. 진도율이 자동 업데이트됩니다.
                             </div>
                         )}
 
-                        <div className="gb-stack gb-stack-4">
-                            {/* 날짜 */}
-                            <div>
-                                <label className="gb-input-label" style={{ display: "flex", alignItems: "center" }}>
-                                    <Calendar style={{ width: 14, height: 14, marginRight: "4px" }} />
-                                    수업 날짜
-                                </label>
-                                <input
-                                    type="date"
-                                    className="gb-input"
-                                    value={recordDate}
-                                    onChange={(e) => setRecordDate(e.target.value)}
-                                    style={{ width: "auto" }}
+                        {/* 날짜 */}
+                        <div className="space-y-1.5">
+                            <Label className="flex items-center gap-1">
+                                <Calendar className="h-3.5 w-3.5" />
+                                수업 날짜
+                            </Label>
+                            <Input
+                                type="date"
+                                value={recordDate}
+                                onChange={(e) => setRecordDate(e.target.value)}
+                                className="w-auto"
+                            />
+                        </div>
+
+                        {/* 요약 */}
+                        <div className="space-y-1.5">
+                            <Label>수업 요약</Label>
+                            <textarea
+                                placeholder="오늘 수업 내용을 요약하세요..."
+                                value={summary}
+                                onChange={(e) => setSummary(e.target.value)}
+                                rows={3}
+                                className="flex w-full resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            />
+                        </div>
+
+                        {/* 범위 (페이지) */}
+                        <div className="space-y-1.5">
+                            <Label>범위 (페이지)</Label>
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    type="number"
+                                    placeholder="시작 페이지"
+                                    value={pagesFrom}
+                                    onChange={(e) => setPagesFrom(e.target.value)}
+                                    className="w-32"
                                 />
-                            </div>
-
-                            {/* 요약 */}
-                            <div>
-                                <label className="gb-input-label">수업 요약</label>
-                                <textarea
-                                    className="gb-input"
-                                    placeholder="오늘 수업 내용을 요약하세요..."
-                                    value={summary}
-                                    onChange={(e) => setSummary(e.target.value)}
-                                    rows={3}
-                                    style={{ resize: "none" }}
+                                <span className="text-muted-foreground">~</span>
+                                <Input
+                                    type="number"
+                                    placeholder="끝 페이지"
+                                    value={pagesTo}
+                                    onChange={(e) => setPagesTo(e.target.value)}
+                                    className="w-32"
                                 />
-                            </div>
-
-                            {/* 범위 (페이지) */}
-                            <div>
-                                <label className="gb-input-label">범위 (페이지)</label>
-                                <div className="gb-row gb-row-2">
-                                    <input
-                                        type="number"
-                                        className="gb-input"
-                                        placeholder="시작 페이지"
-                                        value={pagesFrom}
-                                        onChange={(e) => setPagesFrom(e.target.value)}
-                                        style={{ width: "120px" }}
-                                    />
-                                    <span style={{ color: "var(--color-text-tertiary)" }}>~</span>
-                                    <input
-                                        type="number"
-                                        className="gb-input"
-                                        placeholder="끝 페이지"
-                                        value={pagesTo}
-                                        onChange={(e) => setPagesTo(e.target.value)}
-                                        style={{ width: "120px" }}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* 핵심 개념 */}
-                            <div>
-                                <label className="gb-input-label">핵심 개념</label>
-                                <textarea
-                                    className="gb-input"
-                                    placeholder="오늘 다룬 핵심 개념을 적어주세요..."
-                                    value={conceptNote}
-                                    onChange={(e) => setConceptNote(e.target.value)}
-                                    rows={2}
-                                    style={{ resize: "none" }}
-                                />
-                            </div>
-
-                            {/* 저장 버튼 */}
-                            <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: "var(--space-2)" }}>
-                                <button
-                                    className="gb-btn gb-btn-primary"
-                                    onClick={handleSave}
-                                    disabled={saving || !selectedPlanId}
-                                    style={{ minWidth: "120px", justifyContent: "center" }}
-                                >
-                                    {saving ? <Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} /> : <Plus style={{ width: 16, height: 16 }} />}
-                                    기록 저장
-                                </button>
                             </div>
                         </div>
-                    </div>
-                </div>
+
+                        {/* 핵심 개념 */}
+                        <div className="space-y-1.5">
+                            <Label>핵심 개념</Label>
+                            <textarea
+                                placeholder="오늘 다룬 핵심 개념을 적어주세요..."
+                                value={conceptNote}
+                                onChange={(e) => setConceptNote(e.target.value)}
+                                rows={2}
+                                className="flex w-full resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            />
+                        </div>
+
+                        {/* 저장 버튼 */}
+                        <div className="flex justify-end pt-1">
+                            <Button
+                                onClick={handleSave}
+                                disabled={saving || !selectedPlanId}
+                                className="min-w-[120px]"
+                            >
+                                {saving ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Plus className="h-4 w-4" />
+                                )}
+                                기록 저장
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
-        </div>
+        </PageContainer>
     );
 }

@@ -8,7 +8,6 @@ import {
   Loader2,
   UserPlus,
   BarChart3,
-  X,
   Copy,
   CheckCircle2,
   GraduationCap,
@@ -16,9 +15,26 @@ import {
   Crown,
   User,
   Layers,
+  type LucideIcon,
 } from "lucide-react";
 import { getMyArenaClasses, createArenaClass, getClassMembers } from "@/lib/api/classes";
 import type { ArenaClass, ClassMember } from "@/lib/api/classes";
+import { PageContainer } from "@/components/ui/page-container";
+import { PageHeader } from "@/components/ui/page-header";
+import { Spinner } from "@/components/ui/spinner";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 export default function ClassManagementPage() {
   const [classes, setClasses] = useState<ArenaClass[]>([]);
@@ -101,242 +117,241 @@ export default function ClassManagementPage() {
 
   if (loading) {
     return (
-      <div className="gb-page-dashboard gb-stack gb-stack-6" style={{ paddingTop: "var(--space-10)" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "300px" }}>
-          <Loader2 style={{ width: 32, height: 32, color: "var(--color-text-disabled)", animation: "spin 1s linear infinite" }} />
-        </div>
-      </div>
+      <PageContainer className="space-y-6">
+        <Spinner full label="불러오는 중..." />
+      </PageContainer>
     );
   }
 
   return (
-    <div className="gb-page-dashboard gb-stack gb-stack-8" style={{ paddingTop: "var(--space-10)" }}>
-      {/* 페이지 헤더 */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-        <div className="gb-page-header" style={{ marginBottom: 0 }}>
-          <h1 className="gb-page-title">클래스 관리</h1>
-          <p className="gb-page-desc">
-            {classes.length > 0
-              ? `${classes.length}개의 클래스를 관리하고 있습니다`
-              : "새로운 클래스를 만들어 학생을 관리하세요"}
-          </p>
-        </div>
-        <button
-          className="gb-btn gb-btn-primary"
-          onClick={() => setShowCreateModal(true)}
-        >
-          <Plus style={{ width: 18, height: 18 }} />
-          클래스 생성
-        </button>
-      </div>
+    <PageContainer className="space-y-6">
+      <PageHeader
+        title="클래스 관리"
+        description={
+          classes.length > 0
+            ? `${classes.length}개의 클래스를 관리하고 있습니다`
+            : "새로운 클래스를 만들어 학생을 관리하세요"
+        }
+        actions={
+          <Button onClick={() => setShowCreateModal(true)}>
+            <Plus className="h-4 w-4" />
+            클래스 생성
+          </Button>
+        }
+      />
 
       {/* 상단: 통계 카드 */}
-      <div className="gb-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))" }}>
+      <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="전체 클래스" value={classes.length} unit="개" icon={Layers} />
         <StatCard label="전체 멤버" value={totalMembers} unit="명" icon={Users} />
-        <StatCard label="평균 인원" value={classes.length > 0 ? Math.round(totalMembers / classes.length) : 0} unit="명" icon={GraduationCap} />
+        <StatCard
+          label="평균 인원"
+          value={classes.length > 0 ? Math.round(totalMembers / classes.length) : 0}
+          unit="명"
+          icon={GraduationCap}
+        />
       </div>
 
       {/* 클래스 카드 그리드 */}
       {classes.length > 0 ? (
-        <div>
-          <h2 className="gb-section-title">내 클래스</h2>
-          <div className="gb-grid gb-grid-3">
+        <div className="space-y-3">
+          <h2 className="text-base font-semibold text-foreground">내 클래스</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {classes.map((cls) => {
               const isSelected = cls.id === selectedClass;
               return (
-                <div
+                <button
                   key={cls.id}
                   onClick={() => setSelectedClass(cls.id)}
-                  className="gb-card"
-                  style={{
-                    cursor: "pointer",
-                    borderColor: isSelected ? "var(--color-primary)" : undefined,
-                    borderWidth: isSelected ? 2 : undefined,
-                    background: isSelected ? "var(--color-primary-50, var(--color-bg-secondary))" : undefined,
-                    transition: "all var(--transition-normal)",
-                  }}
+                  className={cn(
+                    "rounded-xl border bg-card p-4 text-left shadow-sm transition-colors",
+                    isSelected ? "border-primary bg-accent" : "hover:bg-muted"
+                  )}
                 >
-                  <div className="gb-row gb-row-3">
-                    <div style={{
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      width: 44, height: 44, borderRadius: "var(--radius-md)",
-                      background: "var(--color-primary-50, var(--color-bg-secondary))",
-                      flexShrink: 0,
-                    }}>
-                      <span style={{ fontSize: "var(--text-lg)", fontWeight: "var(--weight-bold)", color: "var(--color-primary)" }}>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-accent">
+                      <span className="text-lg font-bold text-primary">
                         {cls.name.charAt(0)}
                       </span>
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{
-                        fontSize: "var(--text-base)", fontWeight: "var(--weight-semibold)",
-                        color: "var(--color-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                      }}>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-base font-semibold text-foreground">
                         {cls.name}
                       </div>
-                      <div className="gb-row gb-row-3" style={{ marginTop: "var(--space-1)" }}>
-                        <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "var(--text-sm)", color: "var(--color-text-tertiary)" }}>
-                          <Users style={{ width: 14, height: 14 }} />
+                      <div className="mt-1 flex items-center gap-3">
+                        <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <Users className="h-3.5 w-3.5" />
                           {cls.memberCount || 0}명
                         </span>
-                        <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "var(--text-xs)", fontFamily: "monospace", color: "var(--color-text-tertiary)" }}>
-                          <Hash style={{ width: 12, height: 12 }} />
+                        <span className="flex items-center gap-1 font-mono text-xs text-muted-foreground">
+                          <Hash className="h-3 w-3" />
                           {cls.inviteCode}
                         </span>
                       </div>
                     </div>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
         </div>
       ) : (
-        <div className="gb-card">
-          <div className="gb-empty-state" style={{ padding: "var(--space-16) var(--space-4)" }}>
-            <div className="gb-empty-icon">📚</div>
-            <div className="gb-empty-title">아직 클래스가 없습니다</div>
-            <div className="gb-empty-desc">클래스를 생성하고 학생들을 초대해보세요</div>
-            <button className="gb-btn gb-btn-primary" style={{ marginTop: "var(--space-4)" }} onClick={() => setShowCreateModal(true)}>
-              <Plus style={{ width: 16, height: 16 }} />
+        <EmptyState
+          icon={Layers}
+          title="아직 클래스가 없습니다"
+          description="클래스를 생성하고 학생들을 초대해보세요"
+          action={
+            <Button onClick={() => setShowCreateModal(true)}>
+              <Plus className="h-4 w-4" />
               첫 클래스 만들기
-            </button>
-          </div>
-        </div>
+            </Button>
+          }
+        />
       )}
 
       {/* 선택된 클래스 상세 */}
       {selectedArena && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "var(--space-6)" }}>
+        <div className="grid gap-6 lg:grid-cols-3">
           {/* Left: 정보 */}
-          <div className="gb-stack gb-stack-4">
+          <div className="space-y-4 lg:col-span-1">
             {/* 초대 코드 */}
-            <div className="gb-card">
-              <div className="gb-stat-label">초대 코드</div>
-              <div className="gb-row gb-row-3" style={{ marginTop: "var(--space-2)" }}>
-                <code style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--weight-bold)", fontFamily: "monospace", letterSpacing: "0.2em", color: "var(--color-primary)" }}>
-                  {selectedArena.inviteCode}
-                </code>
-                <button
-                  onClick={() => copyInviteCode(selectedArena.inviteCode)}
-                  className="gb-header-icon-btn"
-                  style={{ background: "var(--color-primary-50, var(--color-bg-secondary))", color: "var(--color-primary)" }}
-                >
-                  {copiedCode === selectedArena.inviteCode ? (
-                    <CheckCircle2 style={{ width: 16, height: 16, color: "var(--color-success)" }} />
-                  ) : (
-                    <Copy style={{ width: 16, height: 16 }} />
-                  )}
-                </button>
-              </div>
-              <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)", marginTop: "var(--space-2)" }}>
-                학생에게 이 코드를 공유하세요
-              </div>
-            </div>
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-sm font-medium text-muted-foreground">초대 코드</p>
+                <div className="mt-2 flex items-center gap-3">
+                  <code className="font-mono text-2xl font-bold tracking-widest text-primary">
+                    {selectedArena.inviteCode}
+                  </code>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    onClick={() => copyInviteCode(selectedArena.inviteCode)}
+                  >
+                    {copiedCode === selectedArena.inviteCode ? (
+                      <CheckCircle2 className="h-4 w-4 text-primary" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  학생에게 이 코드를 공유하세요
+                </p>
+              </CardContent>
+            </Card>
 
             {/* Quick Actions */}
-            <Link href={`/class-management/students?id=${selectedArena.id}`} style={{ textDecoration: "none", color: "inherit" }}>
-              <div className="gb-card" style={{ cursor: "pointer" }}>
-                <div className="gb-row gb-row-3">
-                  <div style={{
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    width: 40, height: 40, borderRadius: "var(--radius-md)",
-                    background: "var(--color-primary-50, var(--color-bg-secondary))",
-                  }}>
-                    <UserPlus style={{ width: 20, height: 20, color: "var(--color-primary)" }} />
+            <Link href={`/class-management/students?id=${selectedArena.id}`}>
+              <Card className="transition-colors hover:bg-muted">
+                <CardContent className="flex items-center gap-3 p-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent">
+                    <UserPlus className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <div style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)", color: "var(--color-text)" }}>학생 임포트</div>
-                    <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)" }}>학생 ID로 일괄 등록</div>
+                    <div className="text-sm font-semibold text-foreground">
+                      학생 임포트
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      학생 ID로 일괄 등록
+                    </div>
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             </Link>
 
-            <Link href={`/class-management/stats?id=${selectedArena.id}`} style={{ textDecoration: "none", color: "inherit" }}>
-              <div className="gb-card" style={{ cursor: "pointer" }}>
-                <div className="gb-row gb-row-3">
-                  <div style={{
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    width: 40, height: 40, borderRadius: "var(--radius-md)",
-                    background: "var(--color-primary-50, var(--color-bg-secondary))",
-                  }}>
-                    <BarChart3 style={{ width: 20, height: 20, color: "var(--color-primary)" }} />
+            <Link href={`/class-management/stats?id=${selectedArena.id}`}>
+              <Card className="transition-colors hover:bg-muted">
+                <CardContent className="flex items-center gap-3 p-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent">
+                    <BarChart3 className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <div style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)", color: "var(--color-text)" }}>학습 통계</div>
-                    <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)" }}>일간/주간 학습량 분석</div>
+                    <div className="text-sm font-semibold text-foreground">
+                      학습 통계
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      일간/주간 학습량 분석
+                    </div>
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             </Link>
           </div>
 
           {/* Right: 멤버 목록 */}
-          <div className="gb-card" style={{ padding: 0, overflow: "hidden" }}>
-            <div className="gb-row gb-row-3" style={{ padding: "var(--space-5) var(--space-6)", borderBottom: "1px solid var(--color-border-light)", justifyContent: "space-between" }}>
-              <div className="gb-row gb-row-2">
-                <Users style={{ width: 18, height: 18, color: "var(--color-primary)" }} />
-                <span style={{ fontWeight: "var(--weight-semibold)", fontSize: "var(--text-base)" }}>멤버 목록</span>
+          <Card className="overflow-hidden lg:col-span-2">
+            <div className="flex items-center justify-between border-b px-6 py-5">
+              <div className="flex items-center gap-2">
+                <Users className="h-[18px] w-[18px] text-primary" />
+                <span className="text-base font-semibold text-foreground">
+                  멤버 목록
+                </span>
                 {members.length > 0 && (
-                  <span className="gb-badge gb-badge-primary">{members.length}명</span>
+                  <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-medium text-primary">
+                    {members.length}명
+                  </span>
                 )}
               </div>
               <Link href={`/class-management/students?id=${selectedClass}`}>
-                <button className="gb-btn gb-btn-outline gb-btn-sm">
-                  <UserPlus style={{ width: 16, height: 16 }} />
+                <Button variant="outline" size="sm">
+                  <UserPlus className="h-4 w-4" />
                   학생 추가
-                </button>
+                </Button>
               </Link>
             </div>
 
-            <div style={{ padding: "var(--space-3) var(--space-4)" }}>
+            <div className="p-3">
               {membersLoading ? (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "var(--space-12) 0" }}>
-                  <Loader2 style={{ width: 24, height: 24, color: "var(--color-text-disabled)", animation: "spin 1s linear infinite" }} />
-                </div>
+                <Spinner />
               ) : members.length > 0 ? (
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <table className="w-full text-sm">
                   <thead>
-                    <tr style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)", textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>
-                      <th style={{ textAlign: "left", padding: "var(--space-2) var(--space-3)", fontWeight: 500 }}>#</th>
-                      <th style={{ textAlign: "left", padding: "var(--space-2) var(--space-3)", fontWeight: 500 }}>이름</th>
-                      <th style={{ textAlign: "left", padding: "var(--space-2) var(--space-3)", fontWeight: 500 }}>아이디</th>
-                      <th style={{ textAlign: "right", padding: "var(--space-2) var(--space-3)", fontWeight: 500 }}>역할</th>
+                    <tr className="text-xs uppercase tracking-wide text-muted-foreground">
+                      <th className="px-3 py-2 text-left font-medium">#</th>
+                      <th className="px-3 py-2 text-left font-medium">이름</th>
+                      <th className="px-3 py-2 text-left font-medium">아이디</th>
+                      <th className="px-3 py-2 text-right font-medium">역할</th>
                     </tr>
                   </thead>
                   <tbody>
                     {members.map((member, idx) => (
-                      <tr key={member.memberId} style={{ borderTop: "1px solid var(--color-border-light)" }}>
-                        <td style={{ padding: "var(--space-3)" }}>
-                          <span style={{
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            width: 28, height: 28, borderRadius: "var(--radius-full)",
-                            background: "var(--color-bg-secondary)", fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
-                          }}>
+                      <tr key={member.memberId} className="border-t">
+                        <td className="px-3 py-3">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-semibold text-foreground">
                             {idx + 1}
                           </span>
                         </td>
-                        <td style={{ padding: "var(--space-3)" }}>
-                          <div className="gb-row gb-row-3">
-                            <div style={{
-                              display: "flex", alignItems: "center", justifyContent: "center",
-                              width: 32, height: 32, borderRadius: "var(--radius-full)",
-                              background: "var(--color-primary-50, var(--color-bg-secondary))",
-                              fontSize: "var(--text-xs)", fontWeight: "var(--weight-bold)", color: "var(--color-primary)",
-                            }}>
+                        <td className="px-3 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-xs font-bold text-primary">
                               {member.nickname?.charAt(0) || "?"}
                             </div>
-                            <span style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)" }}>{member.nickname}</span>
+                            <span className="text-sm font-medium text-foreground">
+                              {member.nickname}
+                            </span>
                           </div>
                         </td>
-                        <td style={{ padding: "var(--space-3)", fontSize: "var(--text-sm)", color: "var(--color-text-tertiary)" }}>
+                        <td className="px-3 py-3 text-sm text-muted-foreground">
                           {member.authMemberId || member.email || "—"}
                         </td>
-                        <td style={{ padding: "var(--space-3)", textAlign: "right" }}>
-                          <span className={`gb-badge ${member.role === "owner" ? "gb-badge-warning" : "gb-badge-primary"}`} style={{ gap: 4 }}>
-                            {member.role === "owner" ? <><Crown style={{ width: 12, height: 12 }} /> 관리자</> : <><User style={{ width: 12, height: 12 }} /> 학생</>}
+                        <td className="px-3 py-3 text-right">
+                          <span
+                            className={cn(
+                              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
+                              member.role === "owner"
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-accent text-primary"
+                            )}
+                          >
+                            {member.role === "owner" ? (
+                              <>
+                                <Crown className="h-3 w-3" /> 관리자
+                              </>
+                            ) : (
+                              <>
+                                <User className="h-3 w-3" /> 학생
+                              </>
+                            )}
                           </span>
                         </td>
                       </tr>
@@ -344,88 +359,96 @@ export default function ClassManagementPage() {
                   </tbody>
                 </table>
               ) : (
-                <div className="gb-empty-state" style={{ padding: "var(--space-12) var(--space-4)" }}>
-                  <div className="gb-empty-icon">👥</div>
-                  <div className="gb-empty-title">등록된 멤버가 없습니다</div>
-                  <div className="gb-empty-desc">&quot;학생 추가&quot; 버튼으로 학생을 등록하세요</div>
-                </div>
+                <EmptyState
+                  icon={Users}
+                  title="등록된 멤버가 없습니다"
+                  description='"학생 추가" 버튼으로 학생을 등록하세요'
+                />
               )}
             </div>
-          </div>
+          </Card>
         </div>
       )}
 
       {/* ─── 클래스 생성 모달 ─── */}
-      {showCreateModal && (
-        <div className="gb-modal-overlay">
-          <div className="gb-modal">
-            <div className="gb-row" style={{ justifyContent: "space-between", marginBottom: "var(--space-6)" }}>
-              <h2 className="gb-modal-title" style={{ marginBottom: 0 }}>새 클래스 생성</h2>
-              <button className="gb-header-icon-btn" onClick={() => setShowCreateModal(false)}>
-                <X style={{ width: 16, height: 16 }} />
-              </button>
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>새 클래스 생성</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4 space-y-4">
+            <div className="space-y-1.5">
+              <Label>
+                클래스 이름 <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                type="text"
+                value={newClassName}
+                onChange={(e) => setNewClassName(e.target.value)}
+                placeholder="예: 고2 수학반 A"
+                autoFocus
+              />
             </div>
-            <div className="gb-stack gb-stack-4">
-              <div>
-                <label className="gb-input-label">
-                  클래스 이름 <span style={{ color: "var(--color-error)" }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  className="gb-input"
-                  value={newClassName}
-                  onChange={(e) => setNewClassName(e.target.value)}
-                  placeholder="예: 고2 수학반 A"
-                  autoFocus
-                />
-              </div>
-              <div>
-                <label className="gb-input-label">설명</label>
-                <textarea
-                  value={newClassDesc}
-                  onChange={(e) => setNewClassDesc(e.target.value)}
-                  placeholder="클래스에 대한 설명을 입력하세요 (선택)"
-                  rows={3}
-                  className="gb-input"
-                  style={{ height: "auto", padding: "var(--space-3) var(--space-4)", resize: "none" }}
-                />
-              </div>
-            </div>
-            <div className="gb-modal-actions" style={{ marginTop: "var(--space-6)", justifyContent: "flex-end" }}>
-              <button className="gb-btn gb-btn-secondary" onClick={() => setShowCreateModal(false)}>취소</button>
-              <button
-                className="gb-btn gb-btn-primary"
-                onClick={handleCreateClass}
-                disabled={creating || !newClassName.trim()}
-              >
-                {creating ? <Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} /> : <Plus style={{ width: 16, height: 16 }} />}
-                생성
-              </button>
+            <div className="space-y-1.5">
+              <Label>설명</Label>
+              <textarea
+                value={newClassDesc}
+                onChange={(e) => setNewClassDesc(e.target.value)}
+                placeholder="클래스에 대한 설명을 입력하세요 (선택)"
+                rows={3}
+                className="flex w-full resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
             </div>
           </div>
-        </div>
-      )}
-    </div>
+          <DialogFooter className="mt-6 gap-2">
+            <Button variant="secondary" onClick={() => setShowCreateModal(false)}>
+              취소
+            </Button>
+            <Button
+              onClick={handleCreateClass}
+              disabled={creating || !newClassName.trim()}
+            >
+              {creating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
+              생성
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </PageContainer>
   );
 }
 
-function StatCard({ label, value, unit, icon: Icon }: { label: string; value: number; unit: string; icon: any }) {
+function StatCard({
+  label,
+  value,
+  unit,
+  icon: Icon,
+}: {
+  label: string;
+  value: number;
+  unit: string;
+  icon: LucideIcon;
+}) {
   return (
-    <div className="gb-stat-card">
-      <div className="gb-stat-label">{label}</div>
-      <div className="gb-row gb-row-3" style={{ justifyContent: "space-between" }}>
-        <div className="gb-stat-value">
-          {value}
-          <span className="gb-stat-unit">{unit}</span>
+    <Card>
+      <CardContent className="p-5">
+        <p className="text-sm font-medium text-muted-foreground">{label}</p>
+        <div className="mt-2 flex items-center justify-between">
+          <div className="text-2xl font-bold text-foreground">
+            {value}
+            <span className="ml-1 text-sm font-medium text-muted-foreground">
+              {unit}
+            </span>
+          </div>
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent">
+            <Icon className="h-5 w-5 text-primary" />
+          </div>
         </div>
-        <div style={{
-          display: "flex", alignItems: "center", justifyContent: "center",
-          width: 40, height: 40, borderRadius: "var(--radius-full)",
-          background: "var(--color-primary-50, var(--color-bg-secondary))",
-        }}>
-          <Icon style={{ width: 20, height: 20, color: "var(--color-primary)" }} />
-        </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

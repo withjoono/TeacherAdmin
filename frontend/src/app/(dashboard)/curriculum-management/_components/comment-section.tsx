@@ -1,34 +1,29 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Button } from "geobuk-shared/ui";
-import { Input } from "geobuk-shared/ui";
 import { Send, MessageCircle } from "lucide-react";
 import type { LessonComment } from "@/lib/api/curriculum";
 import { getComments, addComment } from "@/lib/api/curriculum";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 interface CommentSectionProps {
     lessonRecordId: number;
 }
 
-const roleStyles: Record<string, { bg: string; align: string; bubble: string; badge: string }> = {
+const roleStyles: Record<string, { bubble: string; badge: string }> = {
     '선생님': {
-        bg: 'bg-blue-50',
-        align: 'items-end',
-        bubble: 'bg-blue-500 text-white rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-sm',
-        badge: 'bg-blue-100 text-blue-700',
+        bubble: 'bg-primary text-primary-foreground rounded-2xl rounded-br-sm',
+        badge: 'bg-primary/10 text-primary',
     },
     '학부모': {
-        bg: 'bg-green-50',
-        align: 'items-start',
-        bubble: 'bg-white border border-green-200 text-foreground rounded-tl-2xl rounded-tr-2xl rounded-br-2xl rounded-bl-sm',
-        badge: 'bg-green-100 text-green-700',
+        bubble: 'bg-card border text-foreground rounded-2xl rounded-bl-sm',
+        badge: 'bg-emerald-100 text-emerald-700',
     },
     '학생': {
-        bg: 'bg-purple-50',
-        align: 'items-start',
-        bubble: 'bg-white border border-purple-200 text-foreground rounded-tl-2xl rounded-tr-2xl rounded-br-2xl rounded-bl-sm',
-        badge: 'bg-purple-100 text-purple-700',
+        bubble: 'bg-card border text-foreground rounded-2xl rounded-bl-sm',
+        badge: 'bg-violet-100 text-violet-700',
     },
 };
 
@@ -75,22 +70,22 @@ export function CommentSection({ lessonRecordId }: CommentSectionProps) {
     };
 
     return (
-        <div className="flex flex-col h-full">
+        <div className="flex h-full flex-col">
             {/* 헤더 */}
-            <div className="flex items-center gap-2 pb-3 border-b mb-3">
-                <MessageCircle className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm font-medium">코멘트</span>
+            <div className="mb-3 flex items-center gap-2 border-b pb-3">
+                <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium text-foreground">코멘트</span>
                 <span className="text-xs text-muted-foreground">
                     (선생님, 학부모, 학생 참여)
                 </span>
             </div>
 
             {/* 메시지 영역 */}
-            <div className="flex-1 overflow-y-auto space-y-3 pb-3 max-h-[300px] min-h-[120px]">
+            <div className="max-h-[300px] min-h-[120px] flex-1 space-y-3 overflow-y-auto pb-3">
                 {loading ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">로딩 중...</p>
+                    <p className="py-4 text-center text-sm text-muted-foreground">로딩 중...</p>
                 ) : comments.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">
+                    <p className="py-8 text-center text-sm text-muted-foreground">
                         아직 코멘트가 없습니다. 첫 코멘트를 남겨보세요!
                     </p>
                 ) : (
@@ -102,20 +97,20 @@ export function CommentSection({ lessonRecordId }: CommentSectionProps) {
                         return (
                             <div
                                 key={comment.id}
-                                className={`flex flex-col ${isTeacher ? 'items-end' : 'items-start'}`}
+                                className={cn("flex flex-col", isTeacher ? "items-end" : "items-start")}
                             >
                                 {/* 이름 + 역할 */}
-                                <div className={`flex items-center gap-1.5 mb-1 ${isTeacher ? 'flex-row-reverse' : ''}`}>
-                                    <span className="text-xs font-medium">{comment.author}</span>
-                                    <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded-full ${style.badge}`}>
+                                <div className={cn("mb-1 flex items-center gap-1.5", isTeacher && "flex-row-reverse")}>
+                                    <span className="text-xs font-medium text-foreground">{comment.author}</span>
+                                    <span className={cn("rounded-full px-1.5 py-0.5 text-[10px] font-medium", style.badge)}>
                                         {authorRole}
                                     </span>
                                 </div>
                                 {/* 말풍선 */}
-                                <div className={`max-w-[80%] px-3.5 py-2.5 text-sm shadow-sm ${style.bubble}`}>
+                                <div className={cn("max-w-[80%] px-3.5 py-2.5 text-sm shadow-sm", style.bubble)}>
                                     {comment.content}
                                 </div>
-                                <span className="text-[10px] text-muted-foreground mt-1">
+                                <span className="mt-1 text-[10px] text-muted-foreground">
                                     {formatTime(comment.createdAt)}
                                 </span>
                             </div>
@@ -126,7 +121,7 @@ export function CommentSection({ lessonRecordId }: CommentSectionProps) {
             </div>
 
             {/* 입력 */}
-            <div className="flex items-center gap-2 pt-3 border-t">
+            <div className="flex items-center gap-2 border-t pt-3">
                 <Input
                     placeholder="코멘트를 입력하세요..."
                     value={message}
@@ -135,14 +130,13 @@ export function CommentSection({ lessonRecordId }: CommentSectionProps) {
                     className="flex-1"
                 />
                 <Button
-                    size="sm"
+                    size="icon"
                     onClick={handleSend}
                     disabled={!message.trim() || sending}
                 >
-                    <Send className="w-4 h-4" />
+                    <Send className="h-4 w-4" />
                 </Button>
             </div>
         </div>
     );
 }
-

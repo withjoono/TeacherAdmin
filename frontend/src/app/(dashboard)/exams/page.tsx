@@ -5,6 +5,21 @@ import Link from "next/link";
 import { Plus, Pencil, Trash2, Search, FileText } from "lucide-react";
 import { useAuthStore } from "@/lib/auth";
 import { mockExamApi, type MockExam } from "@/lib/api";
+import { PageContainer } from "@/components/ui/page-container";
+import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Spinner } from "@/components/ui/spinner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 
 export default function ExamsPage() {
   const { accessToken } = useAuthStore();
@@ -50,96 +65,104 @@ export default function ExamsPage() {
   );
 
   return (
-    <div className="gb-page-dashboard gb-stack gb-stack-8" style={{ paddingTop: "var(--space-10)" }}>
-      {/* 페이지 헤더 */}
-      <div className="gb-page-header" style={{ marginBottom: 0 }}>
-        <h1 className="gb-page-title">시험 관리</h1>
-        <p className="gb-page-desc">출제된 시험 목록을 조회하고 새 시험을 생성하세요</p>
-      </div>
-
-      <div className="gb-card">
-        <div className="gb-row gb-row-4" style={{ justifyContent: "space-between", marginBottom: "var(--space-6)" }}>
-          <h2 className="gb-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 0 }}>
-            <FileText style={{ width: 18, height: 18, color: 'var(--color-primary)' }}/>
-            시험 목록
-          </h2>
-          <Link href="/exams/new" style={{ textDecoration: 'none' }}>
-            <button className="gb-btn gb-btn-primary">
-              <Plus style={{ width: 16, height: 16 }} />
+    <PageContainer className="space-y-6">
+      <PageHeader
+        title="시험 관리"
+        description="출제된 시험 목록을 조회하고 새 시험을 생성하세요."
+        actions={
+          <Link href="/exams/new">
+            <Button>
+              <Plus className="h-4 w-4" />
               새 시험 생성
-            </button>
+            </Button>
           </Link>
-        </div>
+        }
+      />
 
-        <div style={{ marginBottom: "var(--space-6)", position: "relative", maxWidth: "400px" }}>
-          <Search style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", width: 16, height: 16, color: "var(--color-text-tertiary)" }} />
-          <input
-            type="text"
-            placeholder="시험 검색..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="gb-input"
-            style={{ paddingLeft: "36px" }}
-          />
-        </div>
+      <Card>
+        <CardContent className="space-y-6 p-6">
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="시험 검색..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
 
-        {isLoading ? (
-          <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-8) 0" }}>
-            <div style={{ width: 24, height: 24, border: "2px solid var(--color-border)", borderTopColor: "var(--color-primary)", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-          </div>
-        ) : filteredExams.length === 0 ? (
-          <div className="gb-empty-state" style={{ padding: "var(--space-8) 0" }}>
-            {searchQuery
-              ? "검색 결과가 없습니다."
-              : "등록된 시험이 없습니다. 새 시험을 생성해주세요."}
-          </div>
-        ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid var(--color-border-light)" }}>
-                  <th style={{ textAlign: "left", padding: "var(--space-3)", fontWeight: "var(--weight-semibold)" }}>코드</th>
-                  <th style={{ textAlign: "left", padding: "var(--space-3)", fontWeight: "var(--weight-semibold)" }}>시험명</th>
-                  <th style={{ textAlign: "left", padding: "var(--space-3)", fontWeight: "var(--weight-semibold)" }}>학년</th>
-                  <th style={{ textAlign: "left", padding: "var(--space-3)", fontWeight: "var(--weight-semibold)" }}>년도</th>
-                  <th style={{ textAlign: "left", padding: "var(--space-3)", fontWeight: "var(--weight-semibold)" }}>월</th>
-                  <th style={{ textAlign: "left", padding: "var(--space-3)", fontWeight: "var(--weight-semibold)" }}>유형</th>
-                  <th style={{ textAlign: "right", padding: "var(--space-3)", fontWeight: "var(--weight-semibold)" }}>작업</th>
-                </tr>
-              </thead>
-              <tbody>
+          {isLoading ? (
+            <Spinner label="시험 목록을 불러오는 중..." />
+          ) : filteredExams.length === 0 ? (
+            <EmptyState
+              icon={FileText}
+              title={searchQuery ? "검색 결과가 없습니다" : "등록된 시험이 없습니다"}
+              description={
+                searchQuery
+                  ? "다른 검색어로 시도해보세요."
+                  : "새 시험을 생성해주세요."
+              }
+            />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>코드</TableHead>
+                  <TableHead>시험명</TableHead>
+                  <TableHead>학년</TableHead>
+                  <TableHead>년도</TableHead>
+                  <TableHead>월</TableHead>
+                  <TableHead>유형</TableHead>
+                  <TableHead className="text-right">작업</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {filteredExams.map((exam) => (
-                  <tr key={exam.id} style={{ borderBottom: "1px solid var(--color-border-light)", transition: "background var(--transition-short)" }}>
-                    <td style={{ padding: "var(--space-3)", fontFamily: "monospace", color: "var(--color-text-secondary)" }}>{exam.code}</td>
-                    <td style={{ padding: "var(--space-3)", fontWeight: "var(--weight-medium)" }}>{exam.name}</td>
-                    <td style={{ padding: "var(--space-3)", color: "var(--color-text-secondary)" }}>{exam.grade}</td>
-                    <td style={{ padding: "var(--space-3)", color: "var(--color-text-secondary)" }}>{exam.year}</td>
-                    <td style={{ padding: "var(--space-3)", color: "var(--color-text-secondary)" }}>{exam.month}월</td>
-                    <td style={{ padding: "var(--space-3)" }}>
-                      <span className="gb-badge gb-badge-primary">{exam.type}</span>
-                    </td>
-                    <td style={{ padding: "var(--space-3)", textAlign: "right" }}>
-                      <div className="gb-row gb-row-1" style={{ justifyContent: "flex-end" }}>
+                  <TableRow key={exam.id}>
+                    <TableCell className="font-mono text-muted-foreground">
+                      {exam.code}
+                    </TableCell>
+                    <TableCell className="font-medium text-foreground">
+                      {exam.name}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {exam.grade}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {exam.year}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {exam.month}월
+                    </TableCell>
+                    <TableCell>
+                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                        {exam.type}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
                         <Link href={`/exams/${exam.id}`}>
-                          <button style={{ padding: "var(--space-2)", borderRadius: "var(--radius-sm)", color: "var(--color-text-secondary)", background: "transparent", border: "1px solid var(--color-border)", cursor: "pointer" }}>
-                            <Pencil style={{ width: 14, height: 14 }} />
-                          </button>
+                          <Button variant="outline" size="icon">
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
                         </Link>
-                        <button
+                        <Button
+                          variant="destructive"
+                          size="icon"
                           onClick={() => handleDelete(exam.id)}
-                          style={{ padding: "var(--space-2)", borderRadius: "var(--radius-sm)", color: "var(--color-error)", background: "var(--color-error-10)", border: "none", cursor: "pointer" }}
                         >
-                          <Trash2 style={{ width: 14, height: 14 }} />
-                        </button>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </PageContainer>
   );
 }
