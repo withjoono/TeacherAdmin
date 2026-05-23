@@ -12,14 +12,23 @@ interface SpinnerProps {
 export function Spinner({ className, label, full }: SpinnerProps) {
   return (
     <div
+      role="status"
+      aria-live="polite"
       className={cn(
         "flex flex-col items-center justify-center gap-3",
         full ? "py-24" : "py-12",
         className,
       )}
     >
-      <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
-      {label && <p className="text-sm text-muted-foreground">{label}</p>}
+      <Loader2
+        className="h-7 w-7 animate-spin text-muted-foreground"
+        aria-hidden="true"
+      />
+      {label ? (
+        <p className="text-sm text-muted-foreground">{label}</p>
+      ) : (
+        <span className="sr-only">불러오는 중</span>
+      )}
     </div>
   );
 }

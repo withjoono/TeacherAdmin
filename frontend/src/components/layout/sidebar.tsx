@@ -65,8 +65,9 @@ const navItems: NavItem[] = [
     icon: FileText,
     subItems: [
       { title: "시험 관리", href: "/exam-management" },
-      { title: "문제 업로드", href: "/question-upload" },
-      { title: "채점 관리", href: "/grading-management" },
+      { title: "모의고사", href: "/exams" },
+      { title: "문제 업로드", href: "/questions/upload" },
+      { title: "채점 관리", href: "/grading" },
     ],
   },
   {
@@ -160,6 +161,8 @@ export function Sidebar() {
                 <div key={item.title} className="relative">
                   <button
                     type="button"
+                    aria-haspopup="menu"
+                    aria-expanded={openMenu === item.title}
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -245,7 +248,7 @@ export function Sidebar() {
           >
             <WonCircle className="h-5 w-5" />
           </a>
-          <button type="button" title="알림" className={iconBtn}>
+          <button type="button" title="알림" aria-label="알림" className={iconBtn}>
             <Bell className="h-5 w-5" />
           </button>
           <a
@@ -262,6 +265,8 @@ export function Sidebar() {
           <div className="relative ml-1">
             <button
               type="button"
+              aria-haspopup="menu"
+              aria-expanded={userOpen}
               onClick={() => setUserOpen(!userOpen)}
               className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-accent"
             >
