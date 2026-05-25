@@ -174,6 +174,42 @@ model mentoring_account_link_tb {
   @@schema("hub")
 }
 
+/// Hub 선생님반 (읽기 전용 — 쓰기는 Hub internal API 경유)
+model HubGroupTeacher {
+  id           BigInt    @id @default(autoincrement())
+  name         String    @db.VarChar(100)
+  teacherHubId String    @map("teacher_hub_id") @db.VarChar(30)
+  subject      String?   @db.VarChar(50)
+  description  String?   @db.Text
+  inviteCode   String?   @unique @map("invite_code") @db.VarChar(32)
+  maxMembers   Int       @default(50) @map("max_members")
+  sourceApp    String    @default("teacher_admin") @map("source_app") @db.VarChar(20)
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  members HubGroupTeacherMember[]
+
+  @@index([teacherHubId])
+  @@map("hub_group_teacher")
+  @@schema("hub")
+}
+
+/// Hub 선생님반 멤버 (읽기 전용)
+model HubGroupTeacherMember {
+  id        BigInt   @id @default(autoincrement())
+  groupId   BigInt   @map("group_id")
+  hubUserId String   @map("hub_user_id") @db.VarChar(30)
+  joinedAt  DateTime @default(now()) @map("joined_at")
+
+  group HubGroupTeacher @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, hubUserId])
+  @@index([hubUserId])
+  @@map("hub_group_teacher_member")
+  @@schema("hub")
+}
+
 // ===== TUTORBOARD ENUMS =====
 
 enum SubmissionStatus {
@@ -209,6 +245,12 @@ model TbLessonPlan {
   title         String
   description   String?
   scheduledDate DateTime? @map("scheduled_date")
+  dayOfWeek     String?   @map("day_of_week")
+  startTime     String?   @map("start_time")
+  endTime       String?   @map("end_time")
+  subject       String?
+  textbook      String?
+  totalSessions Int?      @map("total_sessions")
   progress      Int      @default(0)
   updatedAt     DateTime @updatedAt @map("updated_at")
 
@@ -225,7 +267,7 @@ model TbLessonPlan {
 model TbLessonRecord {
   id           String   @id @default(uuid())
   lessonPlanId String   @map("lesson_plan_id")
-  recordDate   DateTime @map("record_date")
+  recordDate   DateTime? @map("record_date")
   summary      String?
   pagesFrom    Int?     @map("pages_from")
   pagesTo      Int?     @map("pages_to")
