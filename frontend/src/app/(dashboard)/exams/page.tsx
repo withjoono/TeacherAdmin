@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { FileText, Plus, Send, Trash2, Users } from "lucide-react";
+import { FileText, Plus, Send, Trash2, Users, Pencil, PenLine } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PageContainer } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
@@ -77,10 +77,16 @@ export default function ExamListPage() {
         title="시험 출제"
         description="직접 출제한 시험을 관리합니다. 학생은 담당 선생님 시험에서 응시합니다."
         actions={
-          <Button onClick={() => router.push("/exams/new")}>
-            <Plus className="h-4 w-4" />
-            새 시험 출제
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => router.push("/exams/grading")}>
+              <PenLine className="h-4 w-4" />
+              주관식 채점
+            </Button>
+            <Button onClick={() => router.push("/exams/new")}>
+              <Plus className="h-4 w-4" />
+              새 시험 출제
+            </Button>
+          </div>
         }
       />
 
@@ -140,16 +146,27 @@ export default function ExamListPage() {
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  {exam.status === "draft" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={busyId === exam.id}
-                      onClick={() => handlePublish(exam.id)}
-                    >
-                      <Send className="h-3.5 w-3.5" />
-                      발행
-                    </Button>
+                  {exam.status === "draft" && exam.submissionCount === 0 && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={busyId === exam.id}
+                        onClick={() => router.push(`/exams/${exam.id}/edit`)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        편집
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={busyId === exam.id}
+                        onClick={() => handlePublish(exam.id)}
+                      >
+                        <Send className="h-3.5 w-3.5" />
+                        발행
+                      </Button>
+                    </>
                   )}
                   <Button
                     size="sm"

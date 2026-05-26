@@ -61,13 +61,11 @@ const navItems: NavItem[] = [
   },
   { title: "과제", href: "/assignment-management", icon: ClipboardList },
   {
-    title: "테스트",
+    title: "시험",
     icon: FileText,
     subItems: [
-      { title: "시험 관리", href: "/exam-management" },
-      { title: "모의고사", href: "/exams" },
-      { title: "문제 업로드", href: "/questions/upload" },
-      { title: "채점 관리", href: "/grading" },
+      { title: "시험 출제", href: "/exams" },
+      { title: "주관식 채점", href: "/exams/grading" },
     ],
   },
   {
