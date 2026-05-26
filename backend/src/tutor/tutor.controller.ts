@@ -39,7 +39,11 @@ export class TutorController {
     createLessonPlan(
         @Req() req: any,
         @Param('classId') classId: string,
-        @Body() body: { title: string; description?: string; scheduledDate?: string },
+        @Body() body: {
+            title: string; description?: string; scheduledDate?: string;
+            dayOfWeek?: string; startTime?: string; endTime?: string;
+            subject?: string; textbook?: string; totalSessions?: number;
+        },
     ) {
         return this.tutorService.createLessonPlan(this.getHubId(req), classId, body);
     }
@@ -49,7 +53,11 @@ export class TutorController {
         @Req() req: any,
         @Param('classId') classId: string,
         @Param('planId') planId: string,
-        @Body() body: { title?: string; description?: string; scheduledDate?: string; progress?: number },
+        @Body() body: {
+            title?: string; description?: string; scheduledDate?: string; progress?: number;
+            dayOfWeek?: string; startTime?: string; endTime?: string;
+            subject?: string; textbook?: string; totalSessions?: number;
+        },
     ) {
         return this.tutorService.updateLessonPlan(this.getHubId(req), classId, planId, body);
     }
@@ -69,7 +77,7 @@ export class TutorController {
         @Req() req: any,
         @Param('classId') classId: string,
         @Body() body: {
-            lessonPlanId: string; recordDate: string; summary?: string;
+            lessonPlanId: string; recordDate?: string; summary?: string;
             pagesFrom?: number; pagesTo?: number; conceptNote?: string; fileUrl?: string;
         },
     ) {

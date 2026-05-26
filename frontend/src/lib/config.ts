@@ -15,6 +15,9 @@ export const config = {
   hubUrl: process.env.NEXT_PUBLIC_HUB_URL || (isDev ? 'http://localhost:3000' : 'https://www.tskool.kr'),
   hubApiUrl: process.env.NEXT_PUBLIC_HUB_API_URL || (isDev ? 'http://localhost:4000' : 'https://ts-back-nest-479305.du.r.appspot.com'),
 
+  // ExamHub 백엔드 (시험 출제·채점) — 운영 URL은 NEXT_PUBLIC_EXAMHUB_API_URL 로 설정
+  examhubApiUrl: process.env.NEXT_PUBLIC_EXAMHUB_API_URL || (isDev ? 'http://localhost:4003' : 'https://examhub-backend-dot-ts-back-nest-479305.du.r.appspot.com'),
+
   // 연동 앱 URL 매핑
   appUrls: {
     studyplanner: isDev ? 'http://localhost:3004' : 'https://studyplanner-new.web.app',

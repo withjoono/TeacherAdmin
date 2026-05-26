@@ -38,6 +38,12 @@ export interface LessonPlan {
     title: string;
     description?: string;
     scheduledDate?: string;
+    dayOfWeek?: string;
+    startTime?: string;
+    endTime?: string;
+    subject?: string;
+    textbook?: string;
+    totalSessions?: number;
     progress?: number;
     createdAt: string;
     updatedAt: string;
@@ -159,7 +165,11 @@ export async function getLessonPlans(classId: string): Promise<LessonPlan[]> {
 
 export async function createLessonPlan(
     classId: string,
-    data: { title: string; description?: string; scheduledDate?: string }
+    data: {
+        title: string; description?: string; scheduledDate?: string;
+        dayOfWeek?: string; startTime?: string; endTime?: string;
+        subject?: string; textbook?: string; totalSessions?: number;
+    }
 ): Promise<LessonPlan> {
     const response = await authClient.post(`/tutor/classes/${classId}/lesson-plans`, data);
     return response.data;
@@ -168,7 +178,11 @@ export async function createLessonPlan(
 export async function updateLessonPlan(
     classId: string,
     planId: string,
-    data: { title?: string; description?: string; scheduledDate?: string; progress?: number }
+    data: {
+        title?: string; description?: string; scheduledDate?: string; progress?: number;
+        dayOfWeek?: string; startTime?: string; endTime?: string;
+        subject?: string; textbook?: string; totalSessions?: number;
+    }
 ): Promise<LessonPlan> {
     const response = await authClient.put(`/tutor/classes/${classId}/lesson-plans/${planId}`, data);
     return response.data;

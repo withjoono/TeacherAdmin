@@ -32,15 +32,15 @@ export function LessonRecordForm({ classId, onSubmit, isLoading }: LessonRecordF
     const [testResult, setTestResult] = useState("");
 
     const handleSubmit = () => {
-        if (!date || !time || !content) return;
+        // 모든 칸은 선택 사항 — 빈칸 허용
         const days = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
-        const dayOfWeek = days[new Date(date).getDay()] || '';
+        const dayOfWeek = date ? (days[new Date(date).getDay()] || '') : '';
         onSubmit({
             classId,
-            date,
-            dayOfWeek,
-            time,
-            content,
+            date: date || undefined,
+            dayOfWeek: dayOfWeek || undefined,
+            time: time || undefined,
+            content: content || undefined,
             assignmentResult: assignmentResult || undefined,
             nextAssignment: nextAssignment || undefined,
             testResult: testResult || undefined,
@@ -63,19 +63,22 @@ export function LessonRecordForm({ classId, onSubmit, isLoading }: LessonRecordF
                     <DialogTitle>새 수업 기록 작성</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
+                    <p className="text-xs text-muted-foreground">
+                        모든 항목은 선택 사항입니다. 비워두고 저장할 수 있습니다.
+                    </p>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label htmlFor="rec-date">날짜 *</Label>
+                            <Label htmlFor="rec-date">날짜</Label>
                             <Input id="rec-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="rec-time">시간 *</Label>
+                            <Label htmlFor="rec-time">시간</Label>
                             <Input id="rec-time" placeholder="예: 14:00~16:00" value={time} onChange={(e) => setTime(e.target.value)} />
                         </div>
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="rec-content">수업내용 *</Label>
+                        <Label htmlFor="rec-content">수업내용</Label>
                         <textarea
                             id="rec-content"
                             rows={4}
@@ -105,7 +108,7 @@ export function LessonRecordForm({ classId, onSubmit, isLoading }: LessonRecordF
                     <DialogClose asChild>
                         <Button variant="outline">취소</Button>
                     </DialogClose>
-                    <Button onClick={handleSubmit} disabled={!date || !time || !content || isLoading}>
+                    <Button onClick={handleSubmit} disabled={isLoading}>
                         {isLoading ? "저장 중..." : "저장"}
                     </Button>
                 </DialogFooter>

@@ -1,168 +1,170 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { Plus, Pencil, Trash2, Search, FileText } from "lucide-react";
-import { useAuthStore } from "@/lib/auth";
-import { mockExamApi, type MockExam } from "@/lib/api";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { FileText, Plus, Send, Trash2, Users } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { PageContainer } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
-import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
 import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "@/components/ui/table";
+  listTeacherExams,
+  setTeacherExamStatus,
+  deleteTeacherExam,
+  type TeacherExamListItem,
+} from "@/lib/api/teacher-exam";
 
-export default function ExamsPage() {
-  const { accessToken } = useAuthStore();
-  const [exams, setExams] = useState<MockExam[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+const STATUS_META: Record<string, { label: string; className: string }> = {
+  draft: { label: "임시저장", className: "bg-secondary text-muted-foreground ring-1 ring-border" },
+  published: { label: "발행됨", className: "bg-emerald-100 text-emerald-700" },
+  closed: { label: "마감", className: "bg-rose-100 text-rose-700" },
+};
+
+export default function ExamListPage() {
+  const router = useRouter();
+  const [exams, setExams] = useState<TeacherExamListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<number | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setExams(await listTeacherExams());
+    } catch (e: any) {
+      setError(e?.response?.data?.message || "시험 목록을 불러오지 못했습니다.");
+      setExams([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    if (accessToken) {
-      loadExams();
-    }
-  }, [accessToken]);
+    load();
+  }, [load]);
 
-  const loadExams = async () => {
-    if (!accessToken) return;
+  const handlePublish = async (id: number) => {
+    setBusyId(id);
     try {
-      const data = await mockExamApi.getAll(accessToken);
-      setExams(data);
-    } catch (error) {
-      console.error("Failed to load exams:", error);
+      await setTeacherExamStatus(id, "published");
+      await load();
+    } catch (e: any) {
+      setError(e?.response?.data?.message || "발행에 실패했습니다.");
     } finally {
-      setIsLoading(false);
+      setBusyId(null);
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!accessToken) return;
-    if (!confirm("정말로 이 시험을 삭제하시겠습니까?")) return;
-
+    if (!confirm("이 시험을 삭제할까요?")) return;
+    setBusyId(id);
     try {
-      await mockExamApi.delete(id, accessToken);
-      setExams(exams.filter((e) => e.id !== id));
-    } catch (error) {
-      console.error("Failed to delete exam:", error);
-      alert("시험 삭제에 실패했습니다.");
+      await deleteTeacherExam(id);
+      await load();
+    } catch (e: any) {
+      setError(e?.response?.data?.message || "삭제에 실패했습니다.");
+    } finally {
+      setBusyId(null);
     }
   };
-
-  const filteredExams = exams.filter(
-    (exam) =>
-      exam.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      exam.code.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   return (
     <PageContainer className="space-y-6">
       <PageHeader
-        title="시험 관리"
-        description="출제된 시험 목록을 조회하고 새 시험을 생성하세요."
+        title="시험 출제"
+        description="직접 출제한 시험을 관리합니다. 학생은 담당 선생님 시험에서 응시합니다."
         actions={
-          <Link href="/exams/new">
-            <Button>
-              <Plus className="h-4 w-4" />
-              새 시험 생성
-            </Button>
-          </Link>
+          <Button onClick={() => router.push("/exams/new")}>
+            <Plus className="h-4 w-4" />
+            새 시험 출제
+          </Button>
         }
       />
 
-      <Card>
-        <CardContent className="space-y-6 p-6">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="시험 검색..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
+      {error && (
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {error}
+        </div>
+      )}
 
-          {isLoading ? (
-            <Spinner label="시험 목록을 불러오는 중..." />
-          ) : filteredExams.length === 0 ? (
-            <EmptyState
-              icon={FileText}
-              title={searchQuery ? "검색 결과가 없습니다" : "등록된 시험이 없습니다"}
-              description={
-                searchQuery
-                  ? "다른 검색어로 시도해보세요."
-                  : "새 시험을 생성해주세요."
-              }
-            />
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>코드</TableHead>
-                  <TableHead>시험명</TableHead>
-                  <TableHead>학년</TableHead>
-                  <TableHead>년도</TableHead>
-                  <TableHead>월</TableHead>
-                  <TableHead>유형</TableHead>
-                  <TableHead className="text-right">작업</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredExams.map((exam) => (
-                  <TableRow key={exam.id}>
-                    <TableCell className="font-mono text-muted-foreground">
-                      {exam.code}
-                    </TableCell>
-                    <TableCell className="font-medium text-foreground">
+      {loading ? (
+        <Spinner full label="시험 목록을 불러오는 중..." />
+      ) : exams.length === 0 ? (
+        <EmptyState
+          icon={FileText}
+          title="출제한 시험이 없습니다"
+          description="새 시험을 출제하면 여기에 표시됩니다."
+          action={
+            <Button onClick={() => router.push("/exams/new")}>
+              <Plus className="h-4 w-4" />
+              새 시험 출제
+            </Button>
+          }
+        />
+      ) : (
+        <div className="space-y-3">
+          {exams.map((exam) => {
+            const sm = STATUS_META[exam.status] ?? STATUS_META.draft;
+            return (
+              <div
+                key={exam.id}
+                className="flex flex-wrap items-center gap-3 rounded-xl border bg-card p-4"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="truncate text-sm font-semibold text-foreground">
                       {exam.name}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {exam.grade}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {exam.year}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {exam.month}월
-                    </TableCell>
-                    <TableCell>
-                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                        {exam.type}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Link href={`/exams/${exam.id}`}>
-                          <Button variant="outline" size="icon">
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                        </Link>
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          onClick={() => handleDelete(exam.id)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                    </h3>
+                    <span
+                      className={cn(
+                        "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium",
+                        sm.className,
+                      )}
+                    >
+                      {sm.label}
+                    </span>
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                    {exam.grade && <span>{exam.grade}</span>}
+                    <span>{exam.totalQuestions}문항</span>
+                    <span className="flex items-center gap-1">
+                      <Users className="h-3 w-3" />
+                      응시 {exam.submissionCount}명
+                    </span>
+                    {exam.dueDate && (
+                      <span>마감 {new Date(exam.dueDate).toLocaleDateString("ko-KR")}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  {exam.status === "draft" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={busyId === exam.id}
+                      onClick={() => handlePublish(exam.id)}
+                    >
+                      <Send className="h-3.5 w-3.5" />
+                      발행
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={busyId === exam.id || exam.submissionCount > 0}
+                    onClick={() => handleDelete(exam.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </PageContainer>
   );
 }

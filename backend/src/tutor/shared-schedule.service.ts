@@ -87,6 +87,62 @@ export class SharedScheduleService {
         }
     }
 
+    /**
+     * 수업계획을 각 학생의 Classboard 일정에 동기화한다.
+     * 일정에는 과목과 선생님명만 표식한다.
+     */
+    async syncLessonPlan(
+        planId: string,
+        scheduledDate: Date,
+        subject: string,
+        teacherName: string,
+        className: string,
+        studentHubIds: string[],
+    ) {
+        try {
+            // 학생 구성 변동에 대응해 기존 일정 제거 후 재생성
+            await this.prisma.hubSharedSchedule.deleteMany({
+                where: {
+                    sourceApp: 'tutorboard',
+                    eventType: 'lesson',
+                    sourceId: { startsWith: `${planId}:` },
+                },
+            });
+            for (const sid of studentHubIds) {
+                await this.prisma.hubSharedSchedule.create({
+                    data: {
+                        hubUserId: String(sid),
+                        sourceApp: 'tutorboard',
+                        eventType: 'lesson',
+                        sourceId: `${planId}:${sid}`.slice(0, 50),
+                        title: subject,
+                        description: teacherName,
+                        eventDate: scheduledDate,
+                        subject,
+                        metadata: { teacherName, className },
+                    },
+                });
+            }
+        } catch (error) {
+            this.logger.error(`Failed to sync lesson plan ${planId}`, error);
+        }
+    }
+
+    /** 수업계획 일정 제거 (날짜가 비워졌거나 삭제된 경우) */
+    async removeLessonPlan(planId: string) {
+        try {
+            await this.prisma.hubSharedSchedule.deleteMany({
+                where: {
+                    sourceApp: 'tutorboard',
+                    eventType: 'lesson',
+                    sourceId: { startsWith: `${planId}:` },
+                },
+            });
+        } catch (error) {
+            this.logger.error(`Failed to remove lesson plan ${planId}`, error);
+        }
+    }
+
     async removeEvent(eventType: string, sourceId: string) {
         try {
             await this.prisma.hubSharedSchedule.deleteMany({

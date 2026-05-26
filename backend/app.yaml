@@ -11,6 +11,9 @@ env_variables:
   PORT: 8080
   DATABASE_URL: "postgresql://tsuser:tsuser1234@/geobukschool_prod?host=/cloudsql/ts-back-nest-479305:asia-northeast3:geobuk-db&schema=teacher_admin&search_path=teacher_admin,hub,tutorboard,susi,jungsi,mysanggibu,public"
   AUTH_SECRET: "04ca023b39512e46d0c2cf4b48d5aac61d34302994c87ed4eff225dcf3b0a218739f3897051a057f9b846a69ea2927a587044164b7bae5e1306219d50b588cb1"
+  HUB_BACKEND_URL: "https://ts-back-nest-479305.du.r.appspot.com"
+  HUB_SERVICE_ID: "teacher_admin"
+  HUB_SERVICE_TOKEN: "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdmMiLCJzZXJ2aWNlSWQiOiJ0ZWFjaGVyX2FkbWluIiwiaXNzIjoiaHViIiwiaWF0IjoxNzc5NzA1MzI1LCJleHAiOjE4MTEyNDEzMjV9.o7AjZeE8P3VUQXdfDIx-XxsVnc1QBRCs-CiXHWUdJJ-5fiRJ68WPLJAycg7MN--FC-EgepEDUF5Zadn9rh38qg"
 
 beta_settings:
   cloud_sql_instances: ts-back-nest-479305:asia-northeast3:geobuk-db

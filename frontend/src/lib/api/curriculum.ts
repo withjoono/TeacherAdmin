@@ -39,10 +39,10 @@ export interface LessonComment {
 
 export interface CreateLessonRecordData {
   classId: string;
-  date: string;
-  dayOfWeek: string;
-  time: string;
-  content: string;
+  date?: string;
+  dayOfWeek?: string;
+  time?: string;
+  content?: string;
   assignmentResult?: string;
   nextAssignment?: string;
   testResult?: string;
@@ -85,7 +85,7 @@ export async function getLessonRecords(classId: string): Promise<LessonRecord[]>
  */
 export async function createLessonRecord(data: CreateLessonRecordData): Promise<LessonRecord> {
   const response = await authClient.post(`/teacher/classes/${data.classId}/lesson-plans`, {
-    title: data.content.substring(0, 50),
+    title: (data.content || "").substring(0, 50),
     description: data.content,
     scheduledDate: data.date,
   });
@@ -93,10 +93,10 @@ export async function createLessonRecord(data: CreateLessonRecordData): Promise<
   return {
     id: plan.id,
     classId: data.classId,
-    date: data.date,
-    dayOfWeek: data.dayOfWeek,
-    time: data.time,
-    content: data.content,
+    date: data.date || "",
+    dayOfWeek: data.dayOfWeek || "",
+    time: data.time || "",
+    content: data.content || "",
     assignmentResult: data.assignmentResult,
     nextAssignment: data.nextAssignment,
     testResult: data.testResult,

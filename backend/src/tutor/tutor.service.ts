@@ -148,22 +148,34 @@ export class TutorService {
 
     async createLessonPlan(teacherHubId: string, classIdStr: string, data: {
         title: string; description?: string; scheduledDate?: string;
+        dayOfWeek?: string; startTime?: string; endTime?: string;
+        subject?: string; textbook?: string; totalSessions?: number;
     }) {
         const classId = parseInt(classIdStr, 10);
         await this.verifyClassOwnership(teacherHubId, classId);
 
-        return this.prisma.tbLessonPlan.create({
+        const plan = await this.prisma.tbLessonPlan.create({
             data: {
                 classId,
                 title: data.title,
-                description: data.description,
+                description: data.description ?? null,
                 scheduledDate: data.scheduledDate ? new Date(data.scheduledDate) : null,
+                dayOfWeek: data.dayOfWeek ?? null,
+                startTime: data.startTime ?? null,
+                endTime: data.endTime ?? null,
+                subject: data.subject ?? null,
+                textbook: data.textbook ?? null,
+                totalSessions: data.totalSessions ?? null,
             },
         });
+        await this.syncLessonPlanSchedule(teacherHubId, classId, plan);
+        return plan;
     }
 
     async updateLessonPlan(teacherHubId: string, classIdStr: string, planId: string, data: {
         title?: string; description?: string; scheduledDate?: string; progress?: number;
+        dayOfWeek?: string; startTime?: string; endTime?: string;
+        subject?: string; textbook?: string; totalSessions?: number;
     }) {
         const classId = parseInt(classIdStr, 10);
         await this.verifyClassOwnership(teacherHubId, classId);
@@ -171,13 +183,22 @@ export class TutorService {
         const updateData: any = {};
         if (data.title !== undefined) updateData.title = data.title;
         if (data.description !== undefined) updateData.description = data.description;
-        if (data.scheduledDate !== undefined) updateData.scheduledDate = new Date(data.scheduledDate);
+        if (data.scheduledDate !== undefined)
+            updateData.scheduledDate = data.scheduledDate ? new Date(data.scheduledDate) : null;
         if (data.progress !== undefined) updateData.progress = data.progress;
+        if (data.dayOfWeek !== undefined) updateData.dayOfWeek = data.dayOfWeek;
+        if (data.startTime !== undefined) updateData.startTime = data.startTime;
+        if (data.endTime !== undefined) updateData.endTime = data.endTime;
+        if (data.subject !== undefined) updateData.subject = data.subject;
+        if (data.textbook !== undefined) updateData.textbook = data.textbook;
+        if (data.totalSessions !== undefined) updateData.totalSessions = data.totalSessions;
 
-        return this.prisma.tbLessonPlan.update({
+        const plan = await this.prisma.tbLessonPlan.update({
             where: { id: planId },
             data: updateData,
         });
+        await this.syncLessonPlanSchedule(teacherHubId, classId, plan);
+        return plan;
     }
 
     async deleteLessonPlan(teacherHubId: string, classIdStr: string, planId: string) {
@@ -192,7 +213,7 @@ export class TutorService {
     // ===== LESSON RECORDS =====
 
     async createLessonRecord(teacherHubId: string, classIdStr: string, data: {
-        lessonPlanId: string; recordDate: string; summary?: string;
+        lessonPlanId: string; recordDate?: string; summary?: string;
         pagesFrom?: number; pagesTo?: number; conceptNote?: string; fileUrl?: string;
     }) {
         const classId = parseInt(classIdStr, 10);
@@ -201,7 +222,7 @@ export class TutorService {
         return this.prisma.tbLessonRecord.create({
             data: {
                 lessonPlanId: data.lessonPlanId,
-                recordDate: new Date(data.recordDate),
+                recordDate: data.recordDate ? new Date(data.recordDate) : null,
                 summary: data.summary,
                 pagesFrom: data.pagesFrom,
                 pagesTo: data.pagesTo,
@@ -209,6 +230,52 @@ export class TutorService {
                 fileUrl: data.fileUrl,
             },
         });
+    }
+
+    /** 수업계획을 Classboard 일정에 동기화 (과목 + 선생님명만 표식) */
+    private async syncLessonPlanSchedule(
+        teacherHubId: string,
+        classId: number,
+        plan: { id: string; subject: string | null; scheduledDate: Date | null },
+    ) {
+        try {
+            if (!plan.scheduledDate) {
+                await this.sharedSchedule.removeLessonPlan(plan.id);
+                return;
+            }
+            const [cls, teacher, links] = await Promise.all([
+                this.prisma.mentoring_class_tb.findUnique({
+                    where: { id: classId },
+                    select: { name: true, subject: true },
+                }),
+                this.prisma.auth_member.findUnique({
+                    where: { id: teacherHubId },
+                    select: { nickname: true },
+                }),
+                this.prisma.mentoring_account_link_tb.findMany({
+                    where: { class_id: classId },
+                }),
+            ]);
+            const teacherName = teacher?.nickname || '선생님';
+            const subject = plan.subject || cls?.subject || '수업';
+            const studentIds = [
+                ...new Set(
+                    links
+                        .map((l) => (l.member_id === teacherHubId ? l.linked_member_id : l.member_id))
+                        .filter((id): id is string => !!id && id !== teacherHubId),
+                ),
+            ];
+            await this.sharedSchedule.syncLessonPlan(
+                plan.id,
+                plan.scheduledDate,
+                subject,
+                teacherName,
+                cls?.name || '',
+                studentIds,
+            );
+        } catch (e) {
+            this.logger.error(`수업계획 일정 동기화 실패 (plan ${plan.id})`, e);
+        }
     }
 
     // ===== ATTENDANCE =====

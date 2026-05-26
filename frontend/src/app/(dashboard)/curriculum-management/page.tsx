@@ -56,6 +56,12 @@ export default function CurriculumManagementPage() {
   const [newTitle, setNewTitle] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newDate, setNewDate] = useState("");
+  const [newDayOfWeek, setNewDayOfWeek] = useState("");
+  const [newStartTime, setNewStartTime] = useState("");
+  const [newEndTime, setNewEndTime] = useState("");
+  const [newSubject, setNewSubject] = useState("");
+  const [newTextbook, setNewTextbook] = useState("");
+  const [newTotalSessions, setNewTotalSessions] = useState("");
   const [creating, setCreating] = useState(false);
 
   // 수정 다이얼로그
@@ -63,6 +69,12 @@ export default function CurriculumManagementPage() {
   const [editTitle, setEditTitle] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [editDate, setEditDate] = useState("");
+  const [editDayOfWeek, setEditDayOfWeek] = useState("");
+  const [editStartTime, setEditStartTime] = useState("");
+  const [editEndTime, setEditEndTime] = useState("");
+  const [editSubject, setEditSubject] = useState("");
+  const [editTextbook, setEditTextbook] = useState("");
+  const [editTotalSessions, setEditTotalSessions] = useState("");
   const [editProgress, setEditProgress] = useState(0);
   const [saving, setSaving] = useState(false);
 
@@ -118,10 +130,22 @@ export default function CurriculumManagementPage() {
         title: newTitle.trim(),
         description: newDesc.trim() || undefined,
         scheduledDate: newDate || undefined,
+        dayOfWeek: newDayOfWeek.trim() || undefined,
+        startTime: newStartTime || undefined,
+        endTime: newEndTime || undefined,
+        subject: newSubject.trim() || undefined,
+        textbook: newTextbook.trim() || undefined,
+        totalSessions: newTotalSessions ? parseInt(newTotalSessions, 10) : undefined,
       });
       setNewTitle("");
       setNewDesc("");
       setNewDate("");
+      setNewDayOfWeek("");
+      setNewStartTime("");
+      setNewEndTime("");
+      setNewSubject("");
+      setNewTextbook("");
+      setNewTotalSessions("");
       setShowCreateForm(false);
       fetchPlans();
     } catch (err) {
@@ -139,6 +163,12 @@ export default function CurriculumManagementPage() {
     setEditDesc(plan.description || "");
     setEditDate(plan.scheduledDate?.split("T")[0] || "");
     setEditProgress(plan.progress || 0);
+    setEditDayOfWeek(plan.dayOfWeek || "");
+    setEditStartTime(plan.startTime || "");
+    setEditEndTime(plan.endTime || "");
+    setEditSubject(plan.subject || "");
+    setEditTextbook(plan.textbook || "");
+    setEditTotalSessions(plan.totalSessions != null ? String(plan.totalSessions) : "");
   };
 
   // 수정 저장
@@ -151,6 +181,12 @@ export default function CurriculumManagementPage() {
         description: editDesc.trim() || undefined,
         scheduledDate: editDate || undefined,
         progress: editProgress,
+        dayOfWeek: editDayOfWeek.trim() || undefined,
+        startTime: editStartTime || undefined,
+        endTime: editEndTime || undefined,
+        subject: editSubject.trim() || undefined,
+        textbook: editTextbook.trim() || undefined,
+        totalSessions: editTotalSessions ? parseInt(editTotalSessions, 10) : undefined,
       });
       setEditPlan(null);
       fetchPlans();
@@ -246,40 +282,65 @@ export default function CurriculumManagementPage() {
               </div>
 
               <Input
-                placeholder="제목 *"
+                placeholder="제목 (필수)"
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
               />
               <textarea
                 className="flex w-full resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                placeholder="설명 (선택사항)"
+                placeholder="수업 내용 / 진도 (선택)"
                 value={newDesc}
                 onChange={(e) => setNewDesc(e.target.value)}
                 rows={2}
               />
 
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">날짜</label>
+                  <Input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">요일</label>
+                  <Input placeholder="예: 월" value={newDayOfWeek} onChange={(e) => setNewDayOfWeek(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">과목</label>
+                  <Input placeholder="예: 수학" value={newSubject} onChange={(e) => setNewSubject(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">시작 시간</label>
+                  <Input type="time" value={newStartTime} onChange={(e) => setNewStartTime(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">종료 시간</label>
+                  <Input type="time" value={newEndTime} onChange={(e) => setNewEndTime(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">총 회차</label>
                   <Input
-                    type="date"
-                    className="w-auto"
-                    value={newDate}
-                    onChange={(e) => setNewDate(e.target.value)}
+                    type="number"
+                    min={1}
+                    placeholder="예: 16"
+                    value={newTotalSessions}
+                    onChange={(e) => setNewTotalSessions(e.target.value)}
                   />
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="secondary" size="sm" onClick={() => setShowCreateForm(false)}>
-                    취소
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleCreate}
-                    disabled={creating || !newTitle.trim()}
-                  >
-                    {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : "생성"}
-                  </Button>
+                <div className="col-span-2 space-y-1 sm:col-span-3">
+                  <label className="text-xs text-muted-foreground">교재</label>
+                  <Input placeholder="예: 쎈 수학(상)" value={newTextbook} onChange={(e) => setNewTextbook(e.target.value)} />
                 </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                제목만 필수이고, 나머지(날짜·요일·시간·과목·교재·총회차)는 비워둘 수 있습니다.
+              </p>
+
+              <div className="flex items-center justify-end gap-2">
+                <Button variant="secondary" size="sm" onClick={() => setShowCreateForm(false)}>
+                  취소
+                </Button>
+                <Button size="sm" onClick={handleCreate} disabled={creating || !newTitle.trim()}>
+                  {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : "생성"}
+                </Button>
               </div>
             </div>
           )}
@@ -307,6 +368,41 @@ export default function CurriculumManagementPage() {
                           <Calendar className="h-3 w-3" />
                           {plan.scheduledDate.split("T")[0]}
                         </p>
+                      )}
+                      {(plan.subject ||
+                        plan.dayOfWeek ||
+                        plan.startTime ||
+                        plan.endTime ||
+                        plan.textbook ||
+                        plan.totalSessions != null) && (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {plan.subject && (
+                            <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
+                              {plan.subject}
+                            </span>
+                          )}
+                          {plan.dayOfWeek && (
+                            <span className="rounded bg-secondary px-1.5 py-0.5 text-[11px] text-muted-foreground">
+                              {plan.dayOfWeek}
+                            </span>
+                          )}
+                          {(plan.startTime || plan.endTime) && (
+                            <span className="rounded bg-secondary px-1.5 py-0.5 text-[11px] text-muted-foreground">
+                              {plan.startTime ?? ""}
+                              {plan.endTime ? `~${plan.endTime}` : ""}
+                            </span>
+                          )}
+                          {plan.textbook && (
+                            <span className="rounded bg-secondary px-1.5 py-0.5 text-[11px] text-muted-foreground">
+                              교재 {plan.textbook}
+                            </span>
+                          )}
+                          {plan.totalSessions != null && (
+                            <span className="rounded bg-secondary px-1.5 py-0.5 text-[11px] text-muted-foreground">
+                              총 {plan.totalSessions}회
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
@@ -392,6 +488,32 @@ export default function CurriculumManagementPage() {
                 value={editDate}
                 onChange={(e) => setEditDate(e.target.value)}
               />
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="space-y-1">
+                <Label htmlFor="edit-day">요일</Label>
+                <Input id="edit-day" placeholder="예: 월" value={editDayOfWeek} onChange={(e) => setEditDayOfWeek(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="edit-subject">과목</Label>
+                <Input id="edit-subject" placeholder="예: 수학" value={editSubject} onChange={(e) => setEditSubject(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="edit-total">총 회차</Label>
+                <Input id="edit-total" type="number" min={1} placeholder="예: 16" value={editTotalSessions} onChange={(e) => setEditTotalSessions(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="edit-start">시작 시간</Label>
+                <Input id="edit-start" type="time" value={editStartTime} onChange={(e) => setEditStartTime(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="edit-end">종료 시간</Label>
+                <Input id="edit-end" type="time" value={editEndTime} onChange={(e) => setEditEndTime(e.target.value)} />
+              </div>
+              <div className="col-span-2 space-y-1 sm:col-span-3">
+                <Label htmlFor="edit-textbook">교재</Label>
+                <Input id="edit-textbook" placeholder="예: 쎈 수학(상)" value={editTextbook} onChange={(e) => setEditTextbook(e.target.value)} />
+              </div>
             </div>
             <div className="space-y-2">
               <Label>진도율: {editProgress}%</Label>
