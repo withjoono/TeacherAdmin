@@ -152,7 +152,7 @@ export default function ExamListPage() {
                         size="sm"
                         variant="outline"
                         disabled={busyId === exam.id}
-                        onClick={() => router.push(`/exams/${exam.id}/edit`)}
+                        onClick={() => router.push(`/exams/edit?id=${exam.id}`)}
                       >
                         <Pencil className="h-3.5 w-3.5" />
                         편집
