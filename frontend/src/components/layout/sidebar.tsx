@@ -14,6 +14,7 @@ import {
   X,
   ClipboardList,
   MessageSquare,
+  HelpCircle,
 } from "lucide-react";
 import { WonCircle, Acorn } from "@/components/icons";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,7 @@ import { config } from "@/lib/config";
 import { useAuthStore } from "@/lib/auth";
 import { redirectToHubLogout } from "@/lib/sso";
 import { getAccessToken, getRefreshToken } from "geobuk-shared/auth";
+import { QuickStartDialog } from "@/components/quick-start";
 
 /** Hub URL에 SSO 토큰을 포함시켜 자동 로그인 지원 — 클라이언트에서만 호출 */
 function buildHubUrl(path: string): string {
@@ -81,6 +83,7 @@ const navItems: NavItem[] = [
 export function Sidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [userOpen, setUserOpen] = useState(false);
   const navRef = useRef<HTMLElement>(null);
@@ -228,6 +231,15 @@ export function Sidebar() {
 
         {/* Right icons (desktop) */}
         <div className="hidden items-center gap-1 lg:flex">
+          <button
+            type="button"
+            onClick={() => setHelpOpen(true)}
+            title="사용법"
+            aria-label="사용법"
+            className={iconBtn}
+          >
+            <HelpCircle className="h-5 w-5" />
+          </button>
           <a
             href={hubUrls.myAcorns}
             target="_blank"
@@ -324,6 +336,14 @@ export function Sidebar() {
       {mobileOpen && (
         <div className="border-t lg:hidden">
           <nav className="mx-auto max-w-[1280px] space-y-1 px-4 py-3">
+            <button
+              type="button"
+              onClick={() => { setMobileOpen(false); setHelpOpen(true); }}
+              className="flex w-full items-center gap-2 rounded-md bg-primary/5 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/10"
+            >
+              <HelpCircle className="h-4 w-4" />
+              사용법 — 빠른 시작
+            </button>
             {navItems.map((item) => {
               const Icon = item.icon;
               if (item.subItems) {
@@ -402,6 +422,8 @@ export function Sidebar() {
           </nav>
         </div>
       )}
+
+      <QuickStartDialog open={helpOpen} onOpenChange={setHelpOpen} />
     </header>
   );
 }
