@@ -71,7 +71,7 @@ const READY = [
 
 export default function PromoPage() {
   return (
-    <main className="min-h-screen bg-background">
+    <main>
       {/* ===== HERO ===== */}
       <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-background to-background">
         <div className="mx-auto max-w-5xl px-6 py-20 text-center sm:px-12 sm:py-28">
@@ -224,9 +224,6 @@ export default function PromoPage() {
         </div>
       </section>
 
-      <footer className="border-t bg-card py-8 text-center text-xs text-muted-foreground">
-        © 거북스쿨 · Teacher Admin
-      </footer>
     </main>
   );
 }
