@@ -15,6 +15,23 @@ export interface DashboardStats {
     unreadMessages: number;
     todayLessons: any[];
     recentActivities: any[];
+    nextLesson?: {
+        id: string;
+        title: string;
+        className: string | null;
+        classSubject?: string | null;
+        subject?: string | null;
+        textbook?: string | null;
+        startTime?: string | null;
+        endTime?: string | null;
+        scheduledDate: string;
+    } | null;
+    pendingCommentStudents?: Array<{
+        studentId: string;
+        studentName: string;
+        content: string;
+        createdAt: string;
+    }>;
 }
 
 export interface ClassInfo {
@@ -22,6 +39,7 @@ export interface ClassInfo {
     name: string;
     subject: string;
     studentCount: number;
+    weeklyLessonCount?: number;
 }
 
 export interface StudentInfo {
@@ -140,7 +158,33 @@ export async function getDashboard(): Promise<DashboardStats> {
             unreadMessages: 0,
             todayLessons: [],
             recentActivities: [],
+            nextLesson: null,
+            pendingCommentStudents: [],
         };
+    }
+}
+
+// ===== Week schedule =====
+
+export interface WeekScheduleDay {
+    date: string; // YYYY-MM-DD
+    lessons: number;
+    assignments: number;
+    tests: number;
+}
+
+export interface WeekSchedule {
+    weekStart: string;
+    weekEnd: string;
+    days: WeekScheduleDay[];
+}
+
+export async function getWeekSchedule(): Promise<WeekSchedule | null> {
+    try {
+        const response = await authClient.get('/tutor/dashboard/week');
+        return response.data;
+    } catch {
+        return null;
     }
 }
 

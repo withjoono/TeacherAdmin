@@ -42,7 +42,7 @@ export class TutorService {
             studentLinks.map((l) => l.linked_member_id).filter(Boolean),
         );
 
-        const [pendingAssignments, upcomingExams, todayLessons] = await Promise.all([
+        const [pendingAssignments, upcomingExams, todayLessons, nextLessonRaw] = await Promise.all([
             this.prisma.tbAssignment.count({
                 where: { lesson: { classId: { in: classIds } } },
             }).catch(() => 0),
@@ -60,10 +60,40 @@ export class TutorService {
                         lt: new Date(new Date().setHours(23, 59, 59, 999)),
                     },
                 },
-                include: { class: { select: { name: true } } },
+                include: { class: { select: { name: true, subject: true } } },
+                orderBy: [{ startTime: 'asc' }, { scheduledDate: 'asc' }],
                 take: 5,
             }).catch(() => []),
+            this.prisma.tbLessonPlan.findFirst({
+                where: {
+                    classId: { in: classIds },
+                    scheduledDate: { gt: new Date(new Date().setHours(23, 59, 59, 999)) },
+                },
+                include: { class: { select: { name: true, subject: true } } },
+                orderBy: [{ scheduledDate: 'asc' }, { startTime: 'asc' }],
+            }).catch(() => null),
         ]);
+
+        // 답장 대기 학생 — 학생→교사 방향의 최근 코멘트에서 unique 학생 top 3
+        const incoming = recentComments.filter(
+            (c) => (c as any).authorId && (c as any).authorId !== teacherHubId,
+        );
+        const seenAuthors = new Set<string>();
+        const pendingTop: { authorId: string; content: string; createdAt: Date }[] = [];
+        for (const c of incoming) {
+            const a = (c as any).authorId as string;
+            if (seenAuthors.has(a)) continue;
+            seenAuthors.add(a);
+            pendingTop.push({ authorId: a, content: c.content, createdAt: c.createdAt });
+            if (pendingTop.length >= 3) break;
+        }
+        const authorIds = pendingTop.map((p) => p.authorId);
+        const authors = authorIds.length
+            ? await this.prisma.auth_member
+                .findMany({ where: { id: { in: authorIds } }, select: { id: true, nickname: true } })
+                .catch(() => [] as { id: string; nickname: string | null }[])
+            : [];
+        const nameById = new Map(authors.map((a) => [a.id, a.nickname]));
 
         return {
             totalClasses: classes.length,
@@ -71,25 +101,191 @@ export class TutorService {
             pendingAssignments,
             upcomingExams,
             unreadMessages: recentComments.length,
-            todayLessons: todayLessons.map((l) => ({
-                id: l.id,
-                title: l.title,
-                className: (l as any).class?.name,
-                scheduledDate: l.scheduledDate,
-            })),
+            todayLessons: todayLessons.map((l) => {
+                const lp = l as any;
+                return {
+                    id: l.id,
+                    title: l.title,
+                    className: lp.class?.name ?? null,
+                    classSubject: lp.class?.subject ?? null,
+                    subject: l.subject ?? null,
+                    textbook: l.textbook ?? null,
+                    dayOfWeek: l.dayOfWeek ?? null,
+                    startTime: l.startTime ?? null,
+                    endTime: l.endTime ?? null,
+                    totalSessions: l.totalSessions ?? null,
+                    scheduledDate: l.scheduledDate,
+                };
+            }),
             recentActivities: recentComments.map((c) => ({
                 id: c.id,
                 description: c.content.substring(0, 50),
                 time: c.createdAt,
             })),
+            nextLesson: nextLessonRaw
+                ? {
+                    id: (nextLessonRaw as any).id,
+                    title: (nextLessonRaw as any).title,
+                    className: (nextLessonRaw as any).class?.name ?? null,
+                    classSubject: (nextLessonRaw as any).class?.subject ?? null,
+                    subject: (nextLessonRaw as any).subject ?? null,
+                    textbook: (nextLessonRaw as any).textbook ?? null,
+                    startTime: (nextLessonRaw as any).startTime ?? null,
+                    endTime: (nextLessonRaw as any).endTime ?? null,
+                    scheduledDate: (nextLessonRaw as any).scheduledDate,
+                }
+                : null,
+            pendingCommentStudents: pendingTop.map((p) => ({
+                studentId: p.authorId,
+                studentName: nameById.get(p.authorId) ?? '학생',
+                content: p.content.substring(0, 60),
+                createdAt: p.createdAt,
+            })),
+        };
+    }
+
+    /** 이번 주(월~일) 수업·과제·시험 일정 카운트 */
+    async getWeekSchedule(teacherHubId: string) {
+        // 이번 주 월요일 00:00 ~ 다음 주 월요일 00:00 (서버 로컬 기준)
+        const now = new Date();
+        const day = now.getDay(); // 0=Sun, 1=Mon
+        const mondayOffset = day === 0 ? -6 : 1 - day;
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() + mondayOffset);
+        weekStart.setHours(0, 0, 0, 0);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 7);
+
+        const days: { date: string; lessons: number; assignments: number; tests: number }[] = [];
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(weekStart);
+            d.setDate(weekStart.getDate() + i);
+            days.push({
+                date: d.toISOString().slice(0, 10),
+                lessons: 0,
+                assignments: 0,
+                tests: 0,
+            });
+        }
+
+        const classes = await this.prisma.mentoring_class_tb
+            .findMany({
+                where: { teacher_id: teacherHubId, is_active: true },
+                select: { id: true },
+            })
+            .catch(() => [] as { id: number }[]);
+        const classIds = classes.map((c) => c.id);
+        if (classIds.length === 0) {
+            return {
+                weekStart: days[0].date,
+                weekEnd: days[6].date,
+                days,
+            };
+        }
+
+        const [lessons, assignments, tests] = await Promise.all([
+            this.prisma.tbLessonPlan
+                .findMany({
+                    where: {
+                        classId: { in: classIds },
+                        scheduledDate: { gte: weekStart, lt: weekEnd },
+                    },
+                    select: { scheduledDate: true },
+                })
+                .catch(() => [] as { scheduledDate: Date | null }[]),
+            this.prisma.tbAssignment
+                .findMany({
+                    where: {
+                        lesson: { classId: { in: classIds } },
+                        dueDate: { gte: weekStart, lt: weekEnd },
+                    },
+                    select: { dueDate: true },
+                })
+                .catch(() => [] as { dueDate: Date | null }[]),
+            this.prisma.tbTest
+                .findMany({
+                    where: {
+                        lesson: { classId: { in: classIds } },
+                        testDate: { gte: weekStart, lt: weekEnd },
+                    },
+                    select: { testDate: true },
+                })
+                .catch(() => [] as { testDate: Date | null }[]),
+        ]);
+
+        const dayKey = (d: Date | null | undefined) =>
+            d ? new Date(d).toISOString().slice(0, 10) : null;
+        const bump = (k: string | null, field: 'lessons' | 'assignments' | 'tests') => {
+            if (!k) return;
+            const slot = days.find((x) => x.date === k);
+            if (slot) slot[field] += 1;
+        };
+        for (const l of lessons) bump(dayKey(l.scheduledDate), 'lessons');
+        for (const a of assignments) bump(dayKey(a.dueDate), 'assignments');
+        for (const t of tests) bump(dayKey(t.testDate), 'tests');
+
+        return {
+            weekStart: days[0].date,
+            weekEnd: days[6].date,
+            days,
         };
     }
 
     async getMyClasses(teacherHubId: string) {
-        return this.prisma.mentoring_class_tb.findMany({
+        const classes = await this.prisma.mentoring_class_tb.findMany({
             where: { teacher_id: teacherHubId, is_active: true },
             orderBy: { created_at: 'desc' },
         });
+        if (classes.length === 0) return [];
+
+        const classIds = classes.map((c) => c.id);
+
+        // 이번 주 월~일
+        const now = new Date();
+        const day = now.getDay();
+        const mondayOffset = day === 0 ? -6 : 1 - day;
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() + mondayOffset);
+        weekStart.setHours(0, 0, 0, 0);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 7);
+
+        const [links, weekLessons] = await Promise.all([
+            this.prisma.mentoring_account_link_tb
+                .findMany({
+                    where: { class_id: { in: classIds } },
+                    select: { class_id: true, member_id: true, linked_member_id: true },
+                })
+                .catch(() => [] as { class_id: number | null; member_id: string | null; linked_member_id: string | null }[]),
+            this.prisma.tbLessonPlan
+                .groupBy({
+                    by: ['classId'],
+                    where: {
+                        classId: { in: classIds },
+                        scheduledDate: { gte: weekStart, lt: weekEnd },
+                    },
+                    _count: { id: true },
+                })
+                .catch(() => [] as { classId: number; _count: { id: number } }[]),
+        ]);
+
+        const studentSetByClass = new Map<number, Set<string>>();
+        for (const l of links) {
+            if (l.class_id == null) continue;
+            const sid = l.member_id === teacherHubId ? l.linked_member_id : l.member_id;
+            if (!sid) continue;
+            if (!studentSetByClass.has(l.class_id)) studentSetByClass.set(l.class_id, new Set());
+            studentSetByClass.get(l.class_id)!.add(sid);
+        }
+        const weekCountByClass = new Map<number, number>(
+            (weekLessons as any[]).map((w) => [w.classId, w._count?.id ?? 0]),
+        );
+
+        return classes.map((c) => ({
+            ...c,
+            studentCount: studentSetByClass.get(c.id)?.size ?? 0,
+            weeklyLessonCount: weekCountByClass.get(c.id) ?? 0,
+        }));
     }
 
     async getClassStudents(teacherHubId: string, classIdStr: string) {

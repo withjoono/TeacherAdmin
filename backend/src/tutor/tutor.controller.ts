@@ -18,6 +18,11 @@ export class TutorController {
         return this.tutorService.getTeacherDashboard(this.getHubId(req));
     }
 
+    @Get('dashboard/week')
+    getDashboardWeek(@Req() req: any) {
+        return this.tutorService.getWeekSchedule(this.getHubId(req));
+    }
+
     // ===== CLASS MANAGEMENT =====
     @Get('classes')
     getMyClasses(@Req() req: any) {
